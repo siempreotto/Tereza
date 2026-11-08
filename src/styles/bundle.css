@@ -1,0 +1,186 @@
+/* Tereza — component styles. Every value is a token from tokens.json; nothing here redeclares one. */
+
+/* ---------- Ground ---------- */
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background-color: var(--canvas);
+  background-image:
+    radial-gradient(120% 80% at 0% 0%, var(--aura-lilac) 0%, transparent 55%),
+    radial-gradient(90% 70% at 100% 35%, var(--aura-peach) 0%, transparent 50%);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+}
+.tz-ink { color: var(--ink); }
+.tz-muted { color: var(--ink-muted); }
+.tz-num { font-variant-numeric: tabular-nums; }
+.tz-icon { display: block; flex: none; }
+
+/* ---------- Glass ---------- */
+.tz-glass {
+  background: var(--surface-glass);
+  -webkit-backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
+  backdrop-filter: blur(var(--blur-glass)) saturate(1.4);
+  border: 1px solid var(--line-glass);
+  box-shadow: var(--shadow-glass);
+}
+
+/* ---------- Categories: one class sets the pair ---------- */
+.tz-cat-sleep  { --tz-cat: var(--cat-sleep);  --tz-cat-soft: var(--cat-sleep-soft); }
+.tz-cat-feed   { --tz-cat: var(--cat-feed);   --tz-cat-soft: var(--cat-feed-soft); }
+.tz-cat-diaper { --tz-cat: var(--cat-diaper); --tz-cat-soft: var(--cat-diaper-soft); }
+.tz-cat-growth { --tz-cat: var(--cat-growth); --tz-cat-soft: var(--cat-growth-soft); }
+.tz-cat-meds   { --tz-cat: var(--cat-meds);   --tz-cat-soft: var(--cat-meds-soft); }
+.tz-cat-doctor { --tz-cat: var(--cat-doctor); --tz-cat-soft: var(--cat-doctor-soft); }
+
+.tz-caticon {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  color: var(--tz-cat); background: var(--tz-cat-soft);
+}
+.tz-caticon-sm { width: 28px; height: 28px; border-radius: var(--radius-sm); }
+.tz-caticon-md { width: 44px; height: 44px; border-radius: var(--radius-md); }
+.tz-caticon-lg { width: 52px; height: 52px; border-radius: var(--radius-md); }
+
+/* ---------- Focus ---------- */
+.tz-btn:focus-visible, .tz-chip:focus-visible, .tz-logcard.is-action:focus-visible, .tz-timer-toggle:focus-visible,
+.tz-day:focus-visible, .tz-quick-btn:focus-visible, .tz-nav-item:focus-visible, .tz-fab:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* ---------- Button ---------- */
+.tz-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+  min-height: var(--size-tap); padding: 0 var(--space-6);
+  border-radius: var(--radius-pill); border: 1px solid transparent;
+  cursor: pointer; white-space: nowrap;
+  transition: background-color .15s ease, transform .1s ease;
+}
+.tz-btn:active { transform: scale(.98); }
+.tz-btn:disabled { opacity: .45; cursor: not-allowed; transform: none; }
+.tz-btn-lg { min-height: var(--size-fab); padding: 0 var(--space-8); }
+.tz-btn-block { display: flex; width: 100%; }
+.tz-btn-primary { background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-fab); }
+.tz-btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+.tz-btn-glass {
+  color: var(--ink); background: var(--surface-glass); border-color: var(--line-glass); box-shadow: var(--shadow-glass);
+  -webkit-backdrop-filter: blur(var(--blur-glass)); backdrop-filter: blur(var(--blur-glass));
+}
+.tz-btn-glass:hover:not(:disabled) { background: var(--surface); }
+.tz-btn-ghost { background: transparent; color: var(--primary); padding: 0 var(--space-4); }
+.tz-btn-ghost:hover:not(:disabled) { background: var(--primary-soft); color: var(--primary-ink); }
+.tz-btn-danger { background: var(--danger-soft); color: var(--danger); }
+
+/* ---------- Chip ---------- */
+.tz-chip {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  min-height: 40px; padding: 0 var(--space-4);
+  border-radius: var(--radius-pill); border: 1px solid var(--line-strong);
+  background: var(--surface-glass); color: var(--ink); cursor: pointer;
+  -webkit-backdrop-filter: blur(var(--blur-glass)); backdrop-filter: blur(var(--blur-glass));
+}
+.tz-chip.is-selected { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.tz-chip-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--tz-cat); }
+.tz-chip.is-selected .tz-chip-dot { background: var(--on-primary); }
+
+/* ---------- LogCard ---------- */
+.tz-logcard {
+  display: flex; align-items: center; gap: var(--space-3); width: 100%; box-sizing: border-box;
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-3);
+  border-radius: var(--radius-lg); text-align: left; font: inherit; color: inherit;
+}
+.tz-logcard.is-action { cursor: pointer; }
+.tz-logcard.is-action:hover { background: var(--surface); }
+.tz-logcard-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.tz-logcard-main > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tz-logcard-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex: none; }
+.tz-live { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--tz-cat); }
+.tz-live-dot { width: 8px; height: 8px; border-radius: var(--radius-pill); background: var(--tz-cat); animation: tz-pulse 1.6s ease-in-out infinite; }
+@keyframes tz-pulse { 50% { opacity: .35; } }
+
+/* ---------- TimerRing ---------- */
+.tz-timer { position: relative; flex: none; }
+.tz-timer-svg { display: block; }
+.tz-timer-track { stroke: var(--track); }
+.tz-timer-progress { stroke: var(--tz-cat); transition: stroke-dashoffset .6s ease; }
+.tz-timer-center {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--space-1); text-align: center;
+}
+.tz-timer-label { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--tz-cat); }
+.tz-timer-toggle {
+  margin-top: var(--space-2); width: var(--size-tap); height: var(--size-tap);
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-fab);
+}
+.tz-timer-toggle:hover { background: var(--primary-hover); }
+
+/* ---------- DayStrip ---------- */
+.tz-daystrip { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--space-2); }
+.tz-day {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-height: 72px; padding: var(--space-2) 0; box-sizing: border-box;
+  border-radius: var(--radius-md); border: 1px solid var(--line-glass);
+  background: var(--surface-glass); color: var(--ink); cursor: pointer; font: inherit;
+  -webkit-backdrop-filter: blur(var(--blur-glass)); backdrop-filter: blur(var(--blur-glass));
+}
+.tz-day-wd { color: var(--ink-muted); text-transform: uppercase; }
+.tz-day.is-today { border-color: var(--primary); }
+.tz-day.is-selected { background: var(--primary); border-color: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-fab); }
+.tz-day.is-selected .tz-day-wd { color: var(--on-primary); }
+.tz-day-marks { display: flex; gap: 3px; height: 6px; margin-top: 2px; }
+.tz-day-mark { width: 6px; height: 6px; border-radius: var(--radius-pill); background: var(--tz-cat); }
+.tz-day.is-selected .tz-day-mark { background: var(--on-primary); }
+
+/* ---------- StatCard ---------- */
+.tz-stat {
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4) var(--space-5) var(--space-5); border-radius: var(--radius-lg); box-sizing: border-box;
+}
+.tz-stat-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); min-height: 28px; }
+.tz-stat-value { display: flex; align-items: baseline; gap: var(--space-1); }
+.tz-bar { height: 8px; border-radius: var(--radius-pill); background: var(--track); overflow: hidden; }
+.tz-bar-fill { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--tz-cat, var(--primary)); }
+.tz-badge { align-self: flex-start; display: inline-flex; align-items: center; gap: var(--space-1); padding: 4px var(--space-2); border-radius: var(--radius-pill); }
+.tz-badge-success { background: var(--success-soft); color: var(--success); }
+.tz-badge-warning { background: var(--warning-soft); color: var(--warning); }
+.tz-badge-danger  { background: var(--danger-soft);  color: var(--danger); }
+
+/* ---------- QuickActions ---------- */
+.tz-quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
+.tz-quick-btn {
+  display: flex; flex-direction: column; align-items: center; gap: var(--space-2);
+  padding: var(--space-4) var(--space-2); border-radius: var(--radius-lg); cursor: pointer; font: inherit;
+}
+.tz-quick-btn:hover { background: var(--surface); }
+.tz-quick-btn:active { transform: scale(.98); }
+
+/* ---------- BottomNav ---------- */
+.tz-nav {
+  display: flex; align-items: center; justify-content: space-around; gap: var(--space-1);
+  height: var(--size-nav); padding: 0 var(--space-2); box-sizing: border-box;
+  border-radius: var(--radius-xl); border: 1px solid var(--line-glass);
+  background: var(--surface-glass); box-shadow: var(--shadow-float);
+  -webkit-backdrop-filter: blur(var(--blur-strong)) saturate(1.4); backdrop-filter: blur(var(--blur-strong)) saturate(1.4);
+}
+.tz-nav-item {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  min-width: 60px; height: 56px; padding: 0 var(--space-2);
+  border: 0; border-radius: var(--radius-md); background: transparent; color: var(--ink-muted); cursor: pointer; font: inherit;
+}
+.tz-nav-item.is-active { background: var(--primary-soft); color: var(--primary-ink); }
+.tz-fab {
+  width: var(--size-fab); height: var(--size-fab); flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--radius-pill); cursor: pointer;
+  background: var(--primary); color: var(--on-primary); box-shadow: var(--shadow-fab);
+}
+.tz-fab:hover { background: var(--primary-hover); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tz-btn, .tz-timer-progress { transition: none; }
+  .tz-live-dot { animation: none; }
+}

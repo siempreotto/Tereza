@@ -1,0 +1,130 @@
+/* Tereza: variables generadas a partir de ds/tereza/tokens.json.
+   Día es el tema por defecto; cualquier contenedor con data-theme="noche" cambia a Noche.
+   Ajustes de producto (brief 10.1) marcados con "ajuste". */
+
+:root, [data-theme="light"] {
+  --canvas: #f4f1fb;
+  --aura-lilac: #e2d9ff;
+  --aura-peach: #fde4d8;
+  --surface: #ffffff;
+  --surface-glass: #ffffffa8;
+  --surface-sunken: #ece8f7;
+  --track: #e4ddf7;
+  --line: #6e5cbe24;
+  --line-glass: #ffffffcc;
+  --line-strong: #857aad;
+  --ink: #211b3b;
+  --ink-muted: #5f5880;
+  --primary: #6247d6;
+  --primary-hover: #5137c4;
+  --on-primary: #ffffff;
+  --primary-soft: #ebe5ff;
+  --primary-ink: #4a31b8;
+  --focus-ring: #6247d6;
+  --cat-sleep: #4b4fc4;
+  --cat-sleep-soft: #e6e6ff;
+  --cat-feed: #a84a22;
+  --cat-feed-soft: #ffe7da;
+  --cat-diaper: #0f6f7e;
+  --cat-diaper-soft: #d9f3f5;
+  --cat-growth: #2b7149;
+  --cat-growth-soft: #dff3e6;
+  --cat-meds: #a83565;
+  --cat-meds-soft: #fde3ee;
+  --cat-doctor: #2563a6;
+  --cat-doctor-soft: #e0edfb;
+  --success: #2b7149;
+  --success-soft: #dff3e6;
+  --warning: #8a5100;
+  --warning-soft: #fff0d6;
+  --danger: #b8322a;
+  --danger-soft: #fde4e2;
+  --shadow-glass: 0 1px 0 0 #ffffffb3 inset, 0 8px 24px -6px #4b3a9a1f;
+  --shadow-float: 0 16px 40px -12px #4b3a9a40;
+  --shadow-fab: 0 10px 24px -6px #6247d673;
+  /* ajuste: velo detrás de hojas modales */
+  --scrim: #211b3b66;
+  color-scheme: light;
+}
+
+[data-theme="noche"] {
+  --canvas: #0e0b1c;
+  --aura-lilac: #2a2158;
+  --aura-peach: #2e1b2c;
+  --surface: #1c1834;
+  --surface-glass: #2620469e;
+  --surface-sunken: #15122a;
+  --track: #2b2550;
+  --line: #ffffff1a;
+  --line-glass: #ffffff14;
+  --line-strong: #736c9c;
+  /* ajuste: texto principal más tenue que #ece8fa para no encandilar a las 3 a.m. */
+  --ink: #ddd6ee;
+  --ink-muted: #a9a2c9;
+  --primary: #b3a3ff;
+  --primary-hover: #c4b7ff;
+  --on-primary: #191433;
+  --primary-soft: #2e2763;
+  --primary-ink: #d4caff;
+  --focus-ring: #c9bdff;
+  --cat-sleep: #a9adff;
+  --cat-sleep-soft: #252a5e;
+  --cat-feed: #ffad86;
+  --cat-feed-soft: #3d2219;
+  --cat-diaper: #6fd3df;
+  --cat-diaper-soft: #103a40;
+  --cat-growth: #7fd8a3;
+  --cat-growth-soft: #14392a;
+  --cat-meds: #ff9cc4;
+  --cat-meds-soft: #43182c;
+  --cat-doctor: #8fc0ff;
+  --cat-doctor-soft: #172f4f;
+  --success: #7fd8a3;
+  --success-soft: #14392a;
+  --warning: #f4bb68;
+  --warning-soft: #3a2a10;
+  --danger: #ff8f86;
+  --danger-soft: #45191a;
+  --shadow-glass: 0 1px 0 0 #ffffff12 inset, 0 8px 24px -6px #00000080;
+  --shadow-float: 0 16px 40px -12px #000000b3;
+  --shadow-fab: 0 10px 24px -6px #b3a3ff4d;
+  --scrim: #05040ccc;
+  color-scheme: dark;
+}
+
+:root {
+  --font-display: Outfit, "Avenir Next", ui-rounded, system-ui, sans-serif;
+  --font-sans: Nunito, ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --radius-sm: 10px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 32px;
+  --radius-pill: 999px;
+  --blur-glass: 20px;
+  --blur-strong: 32px;
+  --size-tap: 48px;
+  --size-fab: 56px;
+  --size-icon: 24px;
+  --size-nav: 72px;
+}
+
+/* Estilos de texto de Tereza */
+.text-display { font-family: var(--font-display); font-size: 34px; line-height: 40px; font-weight: 600; letter-spacing: -0.02em; }
+.text-title-lg { font-family: var(--font-display); font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.01em; }
+.text-title { font-family: var(--font-display); font-size: 20px; line-height: 26px; font-weight: 600; }
+.text-timer { font-family: var(--font-display); font-size: 44px; line-height: 48px; font-weight: 500; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.text-body-lg { font-family: var(--font-sans); font-size: 17px; line-height: 26px; font-weight: 500; }
+.text-body { font-family: var(--font-sans); font-size: 15px; line-height: 22px; font-weight: 500; }
+.text-body-strong { font-family: var(--font-sans); font-size: 15px; line-height: 22px; font-weight: 700; }
+.text-body-sm { font-family: var(--font-sans); font-size: 13px; line-height: 18px; font-weight: 500; }
+.text-button { font-family: var(--font-sans); font-size: 15px; line-height: 20px; font-weight: 700; }
+.text-label { font-family: var(--font-sans); font-size: 13px; line-height: 16px; font-weight: 700; letter-spacing: 0.01em; }
+.text-caption { font-family: var(--font-sans); font-size: 11px; line-height: 14px; font-weight: 700; letter-spacing: 0.02em; }

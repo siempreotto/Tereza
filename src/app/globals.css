@@ -1,0 +1,38 @@
+@import "../styles/tokens.css";
+@import "../styles/bundle.css";
+@import "../styles/app.css";
+
+/* Tipografías servidas por next/font (sin pedir nada a Google desde el navegador). */
+:root {
+  --font-display: var(--font-outfit), "Avenir Next", ui-rounded, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-rounded, "SF Pro Rounded", system-ui, sans-serif;
+}
+
+/* Tereza como web app real (de referencia/prototipo/index.html): la barra inferior,
+   la zona del pulgar, las hojas y los avisos quedan fijos a la ventana. */
+html, body { background: var(--canvas); }
+body { margin: 0; background-image: none; }
+.tz-screen { min-height: 100vh; min-height: 100dvh; }
+.tz-main { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+.tz-main.docked { padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); }
+.tz-scrim { position: fixed; z-index: 30; }
+.tz-sheet { position: fixed; z-index: 31; max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+.tz-toast { position: fixed; z-index: 40; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+input.tz-input, select.tz-input, textarea.tz-input { font: 500 16px/22px var(--font-sans); -webkit-appearance: none; appearance: none; }
+@media (max-width: 1023px) {
+  .tz-bottom { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; }
+  .tz-dock { position: fixed; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 19; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  .tz-main { max-width: 640px; margin: 0 auto; }
+  .tz-bottom, .tz-dock, .tz-toast { left: 50%; right: auto; width: 560px; transform: translateX(-50%); }
+  .tz-sheet { left: 50%; right: auto; width: 600px; transform: translateX(-50%); }
+}
+@media (min-width: 1024px) {
+  .tz-side { position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
+  .tz-toast { bottom: 32px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .tz-screen:not([data-theme="noche"]) .tz-sheet { animation: tz-up .2s ease-out; }
+  @keyframes tz-up { from { opacity: 0; translate: 0 24px; } to { opacity: 1; translate: 0 0; } }
+}

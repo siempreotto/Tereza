@@ -1,0 +1,76 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"></head><body><title>Tereza</title>
+<meta name="theme-color" content="#f4f1fb">
+<link rel="stylesheet" href="tereza/tokens.css">
+<link rel="stylesheet" href="tereza/bundle.css">
+<link rel="stylesheet" href="tereza/app.css">
+<style>
+  /* Tereza como web app real: mobile first, la barra inferior y la zona del pulgar quedan fijas a la ventana. */
+  html, body { background: #f4f1fb; }
+  body { margin: 0; background-image: none; }
+  body.is-noche, html:has(body.is-noche) { background: #0e0b1c; }
+  #app { min-height: 100vh; }
+  .tz-screen { min-height: 100vh; min-height: 100dvh; }
+  .tz-screen button.tz-baby { font: inherit; cursor: pointer; }
+  .tz-main { padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px)); }
+  .tz-main.docked { padding-bottom: calc(260px + env(safe-area-inset-bottom, 0px)); }
+  .tz-scrim { position: fixed; z-index: 30; }
+  .tz-sheet { position: fixed; z-index: 31; max-height: calc(100dvh - 40px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px)); }
+  .tz-toast { position: fixed; z-index: 40; bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+  .tz-toast.high { bottom: calc(236px + env(safe-area-inset-bottom, 0px)); }
+  .tz-toast.mid { bottom: calc(160px + env(safe-area-inset-bottom, 0px)); }
+  .tz-tl-ev .t { width: 72px; }
+  .tz-tl-sleep:focus-visible, .tz-tl-ev:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+  input.tz-input, select.tz-input, textarea.tz-input { font: 500 16px/22px var(--font-sans); -webkit-appearance: none; appearance: none; }
+  select.tz-input { background-image: none; }
+  textarea.tz-input { display: block; }
+  @media (max-width: 1023px) {
+    .tz-bottom { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 20; }
+    .tz-dock { position: fixed; bottom: calc(100px + env(safe-area-inset-bottom, 0px)); z-index: 19; }
+    .tz-dock.low { bottom: calc(20px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (min-width: 640px) and (max-width: 1023px) {
+    .tz-main { max-width: 640px; margin: 0 auto; }
+    .tz-bottom, .tz-dock, .tz-toast { left: 50%; right: auto; width: 560px; transform: translateX(-50%); }
+    .tz-sheet { left: 50%; right: auto; width: 600px; transform: translateX(-50%); }
+  }
+  @media (min-width: 1024px) {
+    .tz-side { position: sticky; top: 0; height: 100vh; box-sizing: border-box; }
+    .tz-toast, .tz-toast.high, .tz-toast.mid { bottom: 32px; }
+    .tz-main.docked { padding-bottom: 64px; }
+  }
+  /* Recorrido guiado */
+  .tz-tour { position: fixed; z-index: 45; top: calc(10px + env(safe-area-inset-top, 0px)); left: 10px; right: 10px; display: flex; flex-direction: column; gap: 10px;
+    padding: 12px 14px 14px; border-radius: 22px; background: var(--surface); border: 1.5px solid var(--primary); box-shadow: var(--shadow-float); color: var(--ink); }
+  .tz-tour.min { flex-direction: row; align-items: center; gap: 10px; padding: 8px 14px; min-height: 48px; cursor: pointer; font: inherit; text-align: left; }
+  .tz-tour-dot { width: 10px; height: 10px; border-radius: 999px; background: var(--primary); flex: none; }
+  .touring .tz-main, .touring-min .tz-main { padding-top: calc(var(--tour-h, 220px) + 24px); }
+  .tz-tour-target { outline: 3px solid var(--primary) !important; outline-offset: 3px; box-shadow: 0 0 0 9px var(--primary-soft) !important; }
+  @media (min-width: 640px) and (max-width: 1023px) { .tz-tour { left: 50%; right: auto; width: 600px; transform: translateX(-50%); } }
+  @media (min-width: 1024px) {
+    .tz-tour { left: 12px; right: auto; top: auto; bottom: 12px; width: 240px; }
+    .tz-tour.solo { left: auto; right: 24px; top: 24px; bottom: auto; width: 380px; }
+    .touring .tz-main, .touring-min .tz-main { padding-top: 32px; }
+    .touring .tz-main.solo, .touring-min .tz-main.solo { padding-top: 72px; }
+    .touring .tz-side-foot, .touring-min .tz-side-foot { visibility: hidden; }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .tz-screen:not([data-theme="noche"]) .tz-tour-target { animation: tz-ring 1.6s ease-in-out infinite; }
+    @keyframes tz-ring { 50% { outline-offset: 7px; } }
+    .tz-screen:not([data-theme="noche"]) .tz-sheet { animation: tz-up .2s ease-out; }
+    @keyframes tz-up { from { opacity: 0; translate: 0 24px; } to { opacity: 1; translate: 0 0; } }
+  }
+</style>
+
+<div id="app"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/htm@3.1.1/dist/htm.umd.js"></script>
+<script src="tereza/bundle.js"></script>
+<script src="core.js"></script>
+<script src="ui.js"></script>
+<script src="screens.js"></script>
+<script src="screens2.js"></script>
+<script src="tour.js"></script>
+<script src="main.js"></script>
+</body></html>
