@@ -1,8 +1,8 @@
 # Estado de Tereza
 
-**Hito actual:** 0. Infraestructura (en curso)
+**Hito actual:** 0. Infraestructura (terminado; esperando tu visto bueno para el Hito 1)
 **Rama:** `claude/hito-0-infra`
-**Último preview:** pendiente (falta crear el proyecto de Vercel)
+**Último preview:** https://tereza-git-claude-hito-0-infra-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
 
 ## Hito 0: terminado cuando…
 - [x] Repo creado y con scaffold de Next.js 16 (TS estricto, ESLint, Vitest, Playwright, pnpm)
@@ -12,7 +12,7 @@
 - [x] Proyecto Supabase `tereza` creado (ref `jkqwlczjqoqmxhatqfad`, us-east-1, org OttoSento)
 - [x] Proyecto Vercel `tereza` (equipo Sento Product) vinculado al repo; producción desde `main`
 - [x] Variables públicas cargadas (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`)
-- [ ] Preview desplegado que responde `/api/salud` con «Supabase: conectado»
+- [x] Preview desplegado: `/api/salud` responde 200 con «Supabase: conectado»
 
 ## Pendientes manuales tuyos
 - Antes del Hito 2: copiar la llave secreta de Supabase (Project Settings › API Keys › Secret keys) a Vercel como `SUPABASE_SECRET_KEY`, tipo «Sensitive», solo Production y Preview. El MCP de Supabase no entrega llaves secretas, a propósito.
