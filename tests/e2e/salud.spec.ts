@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("la página de salud carga y muestra el estado de Supabase", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/salud");
   await expect(page.getByRole("heading", { name: "El día de tu bebé, registrado en un toque." })).toBeVisible();
   await expect(page.getByRole("region", { name: "Estado técnico" })).toContainText("Supabase");
 });

@@ -1,0 +1,9 @@
+<!-- Plantilla para Supabase › Authentication › Emails › «Magic Link» y «Confirm signup».
+     Asunto sugerido: Tu código para entrar a Tereza -->
+<div style="font-family: Nunito, Arial, sans-serif; color: #211b3b; max-width: 480px; margin: 0 auto; padding: 24px;">
+  <p style="font-size: 22px; font-weight: 700; margin: 0 0 16px;">Tereza</p>
+  <p style="font-size: 16px; line-height: 24px; margin: 0 0 16px;">Tu código para entrar es:</p>
+  <p style="font-size: 32px; letter-spacing: 8px; font-weight: 700; margin: 0 0 16px;">{{ .Token }}</p>
+  <p style="font-size: 15px; line-height: 22px; margin: 0 0 16px;">Escríbelo en la app. También puedes <a href="{{ .ConfirmationURL }}" style="color: #6247d6;">entrar desde este enlace</a> en el mismo teléfono.</p>
+  <p style="font-size: 13px; line-height: 18px; color: #5f5880; margin: 0;">El código vence en una hora. Si no pediste entrar, ignora este correo.</p>
+</div>

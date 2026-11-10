@@ -1,43 +1,48 @@
-import { CategoryIcon, Icon } from "@/components/tz";
-import { revisarSalud } from "@/lib/health";
+import Link from "next/link";
+import { CategoryIcon } from "@/components/tz";
+import { requiereHogar } from "@/lib/auth/session";
+import { edadTexto } from "@/lib/core/edad";
 
 export const dynamic = "force-dynamic";
 
-// Hito 0: página de salud. Se reemplaza por «Hoy» en el Hito 3.
-export default async function Home() {
-  const salud = await revisarSalud();
-  const conectado = salud.supabase === "conectado";
+// Hito 2: portada provisional con el hogar y el bebé. «Hoy» (estado, timers y registro) llega en el Hito 3.
+export default async function Inicio() {
+  const c = await requiereHogar();
+  const bebe = c.bebes[0];
   return (
     <div className="tz-screen" data-theme="light">
-      <main className="tz-main solo">
-        <div className="tz-stack s24">
-          <div className="tz-stack s8">
-            <p className="tz-logo" style={{ padding: 0 }}>Tereza</p>
-            <h1 className="text-title-lg">El día de tu bebé, registrado en un toque.</h1>
-            <p className="text-body tz-muted">Estamos construyendo la app. Esta página muestra si la infraestructura responde.</p>
-          </div>
-          <section className="tz-list tz-glass" aria-label="Estado técnico">
-            <div className="tz-row">
-              <CategoryIcon category="doctor" />
-              <span className="grow">
-                <span className="text-body-strong">Supabase</span>
-                <span className="text-body-sm tz-muted">Base de datos y acceso</span>
-              </span>
-              <span className={`tz-tag ${conectado ? "success" : "warning"}`}>
-                {conectado ? <Icon name="check" size={14} /> : null}
-                {salud.supabase === "conectado" ? "Conectado" : salud.supabase === "sin configurar" ? "Sin configurar" : "Sin respuesta"}
-              </span>
-            </div>
-            <div className="tz-row">
-              <CategoryIcon category="growth" />
-              <span className="grow">
-                <span className="text-body-strong">Versión</span>
-                <span className="text-body-sm tz-muted">Entorno: {salud.entorno}</span>
-              </span>
-              <span className="text-body-strong tz-num">{salud.version}</span>
-            </div>
-          </section>
+      <main className="tz-main">
+        <div className="tz-top">
+          {bebe ? (
+            <span className="tz-baby">
+              <span className="tz-avatar">{bebe.nombre.charAt(0)}</span>
+              <span className="text-body-strong">{bebe.nombre}</span>
+              <span className="text-body-sm tz-muted">{edadTexto(bebe.fecha_nacimiento, new Date(), bebe.semanas_gestacion)}</span>
+            </span>
+          ) : <span className="tz-logo">Tereza</span>}
         </div>
+        <section className="tz-hero tz-glass" aria-label="Tu hogar">
+          <div className="tz-hero-state">
+            <span className="text-label tz-muted">{c.hogar.nombre}</span>
+            <p className="text-title-lg">Hola, {c.miembro.nombre}</p>
+            <p className="text-body tz-muted">Ya está listo tu hogar. El registro del día (sueño, tomas y pañales con un toque) llega en la próxima versión.</p>
+          </div>
+        </section>
+        <nav className="tz-list tz-glass" aria-label="Opciones">
+          {c.miembro.rol === "admin" ? (
+            <Link className="tz-row" href="/mas/cuidadores">
+              <CategoryIcon category="doctor" />
+              <span className="grow"><span className="text-body-strong">Cuidadores y roles</span><span className="text-body-sm tz-muted">Invita a quien cuida y elige qué ve</span></span>
+            </Link>
+          ) : null}
+          <Link className="tz-row" href="/salud">
+            <CategoryIcon category="growth" />
+            <span className="grow"><span className="text-body-strong">Estado técnico</span><span className="text-body-sm tz-muted">Versión y conexión</span></span>
+          </Link>
+        </nav>
+        <form action="/salir" method="post">
+          <button className="tz-btn tz-btn-ghost text-button" type="submit">Salir</button>
+        </form>
       </main>
     </div>
   );

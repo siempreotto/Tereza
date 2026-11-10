@@ -1,8 +1,8 @@
 # Estado de Tereza
 
-**Hito actual:** 1. Esquema y RLS (terminado; sigue el Hito 2)
-**Rama:** `claude/hito-1-esquema`
-**Último preview:** https://tereza-git-claude-hito-1-esquema-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
+**Hito actual:** 2. Acceso y alta (código listo; faltan 2 ajustes tuyos en Supabase para probarlo de punta a punta)
+**Rama:** `claude/hito-2-acceso`
+**Último preview:** https://tereza-git-claude-hito-2-acceso-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».
@@ -25,9 +25,25 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 | Limitado | Sueño, tomas y pañales de hoy o en curso | Sueño, tomas, pañales | Ver salud, días anteriores, invitaciones; registrar a nombre de otro |
 | Ajeno | Nada | Nada | — |
 
+## Hito 2: terminado cuando…
+- [x] Entrar con correo: código de 6 dígitos (sirve en la PWA instalada) o enlace del correo
+- [ ] Entrar con Google (pendiente: cliente OAuth de Google)
+- [x] Alta en 5 pasos: hogar (tu nombre, zona, unidades), bebé (edad corregida si nació antes de las 37 semanas), sueño seguro, invitar, Claude
+- [x] Invitar con rol: enlace de un solo uso, 7 días, ligado al correo; se comparte por WhatsApp o correo
+- [x] Aceptar invitación: muestra hogar, quién invita y rol; rechaza otro correo, vencida o ya usada
+- [x] Más › Cuidadores: personas, roles e invitaciones pendientes (solo admin)
+- [x] Probado contra la base (como usuario real con RLS): crear hogar y bebé, invitar, ver y aceptar, reusar token y otro correo
+- [x] e2e públicos 16/16; e2e con sesión escritos (`tests/e2e/onboarding.spec.ts`), en pausa hasta tener red a Supabase desde el entorno
+- [ ] Probado en el preview de punta a punta (después de los 2 ajustes de abajo)
+
 ## Pendientes manuales tuyos
-- Antes del Hito 2: copiar la llave secreta de Supabase (Project Settings › API Keys › Secret keys) a Vercel como `SUPABASE_SECRET_KEY`, tipo «Sensitive», solo Production y Preview.
-- Antes del Hito 2: cliente OAuth de Google (te diré dónde hacer clic).
+- **Para probar el acceso en el preview (5 minutos, en Supabase):**
+  1. Authentication › URL Configuration: Site URL = `https://tereza-kappa.vercel.app`; en Redirect URLs agrega `https://tereza-*-sento-product.vercel.app/**` y `http://localhost:3000/**`.
+  2. Authentication › Emails: en «Magic Link» y en «Confirm signup» pega `supabase/templates/codigo.html` (asunto: «Tu código para entrar a Tereza»). Así el correo trae el código de 6 dígitos.
+- Más adelante: copiar la llave secreta de Supabase (Project Settings › API Keys › Secret keys) a Vercel como `SUPABASE_SECRET_KEY`, tipo «Sensitive», solo Production y Preview.
+- Más adelante: cliente OAuth de Google para «Continuar con Google».
+- Usuario de pruebas e2e `e2e@ejemplo.tereza.test` (contraseña en `.env.local`, fuera de git): borrarlo junto con el ejemplo antes de datos reales.
+- Red del entorno de Claude: agregar `jkqwlczjqoqmxhatqfad.supabase.co` y `*.vercel.app` a Allowed domains para que corran los e2e con sesión.
 - Antes de datos reales: borrar el ejemplo (instrucciones al final de `supabase/seed/ejemplo.sql`) y transferir el proyecto de Vercel a una cuenta personal.
 
 ## Riesgos abiertos

@@ -725,6 +725,7 @@ export type Database = {
         Returns: boolean
       }
       referencia_sueno: { Args: { p_meses: number }; Returns: Json }
+      ver_invitacion: { Args: { p_token: string }; Returns: Json }
       sueno_por_dia: {
         Args: { p_baby: string; p_desde: string; p_hasta: string }
         Returns: {
