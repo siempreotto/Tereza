@@ -90,7 +90,8 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Accesibilidad WCAG 2.1 AA con axe en 12 pantallas, modo Día y Noche: 0 violaciones
 - [x] Más › Tus datos: exportar CSV (abre en Excel/Sheets) y JSON completo; eliminar cuenta con confirmación (borrado real: si eres el único miembro se borran hogar, bebés, registros, salud y adjuntos; si compartes el hogar tus registros quedan para la familia; el último admin de un hogar compartido primero debe nombrar a otro)
 - [x] Playwright: flujos de los capítulos del recorrido (primeros minutos, primer día con temporizadores y deshacer, modo noche, Diario y salud, sin red); «Diego desde Claude» cubierto por las pruebas de integración del MCP
-- [x] Todo en verde antes de publicar: lint, typecheck, 52 unitarias, 8 de integración MCP, e2e en móvil y escritorio
+- [x] Todo en verde antes de publicar: lint, typecheck, 52 unitarias, 8 de integración MCP, 42 e2e en móvil y escritorio
+- [x] Publicado en producción (`main`, a39ad40): `/api/salud` conectado, `/api/mcp` responde 401 con metadatos OAuth correctos; 16 e2e de navegador pasan contra producción
 
 ## Pendientes manuales tuyos
 - **Supabase › Authentication › OAuth Server: presiona «Save changes».** Los interruptores se ven encendidos, pero el servidor sigue respondiendo «OAuth server is disabled». Sin esto Claude no puede conectarse.
