@@ -535,7 +535,7 @@ function HojaDetalle({ cerrar, evento: e0, ahora, ajustes: a, eliminar, alCorreg
       {e0.tipo === "temperatura" ? <Stepper label="una décima" value={Number(payload.valor_c).toFixed(1)} unit="°C" onDec={() => set("valor_c", Math.round((Number(payload.valor_c) - 0.1) * 10) / 10)} onInc={() => set("valor_c", Math.round((Number(payload.valor_c) + 0.1) * 10) / 10)} /> : null}
       {e0.tipo === "nota" ? <Field label="Nota" id="ev-nt"><textarea id="ev-nt" className="tz-input area" value={String(payload.texto ?? "")} onChange={(ev) => set("texto", ev.target.value)} /></Field> : <Field label="Nota (opcional)" id="ev-n"><textarea id="ev-n" className="tz-input area" value={notas} onChange={(ev) => setNotas(ev.target.value)} /></Field>}
       <div className="tz-sunken tz-stack s4" style={{ padding: 12 }}>
-        <span className="text-body-strong">Registrado por {quien} {e0.source === "mcp" ? "desde Claude" : "desde la app"}</span>
+        <span className="text-body-strong">Registrado por {quien} {e0.source === "mcp" ? "desde un asistente (Claude o ChatGPT)" : "desde la app"}</span>
         {e0.version > 1 ? <span className="text-body-sm tz-muted">Editado {e0.version - 1} {e0.version === 2 ? "vez" : "veces"}</span> : null}
       </div>
       <div className="tz-sheet-actions" style={{ flexDirection: "column" }}>

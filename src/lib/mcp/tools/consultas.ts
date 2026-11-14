@@ -132,7 +132,7 @@ const hhmm = (min: number) => { const h = Math.floor(min / 60) % 24, m = Math.ro
 export function registrarHerramientasConsulta(server: McpServer, conCtx: ConCtx) {
   server.registerTool("consultar_eventos", {
     title: "Consultar registros",
-    description: "Lista registros con filtros (tipos, rango de fechas, quién registró, origen web o Claude). Máximo 200; si hay más, truncado=true.",
+    description: "Lista registros con filtros (tipos, rango de fechas, quién registró, origen: web = la app, mcp = un asistente). Máximo 200; si hay más, truncado=true.",
     inputSchema: z.object({
       baby_id: babyId,
       tipos: z.array(z.enum(TIPOS)).optional(),
@@ -167,7 +167,7 @@ export function registrarHerramientasConsulta(server: McpServer, conCtx: ConCtx)
     const truncado = evs.length > limite;
     const out = evs.slice(0, limite).map((e) => eventoOut(ctx, e, nombres, meds));
     const txt = out.length
-      ? out.map((e) => `• ${fFecha(ms(e.started_at), tz)}, ${fHora(ms(e.started_at), tz)}: ${e.resumen_texto}${e.logged_by_nombre ? ` (${e.logged_by_nombre}${e.source === "mcp" ? ", desde Claude" : ""})` : ""}`).join("\n")
+      ? out.map((e) => `• ${fFecha(ms(e.started_at), tz)}, ${fHora(ms(e.started_at), tz)}: ${e.resumen_texto}${e.logged_by_nombre ? ` (${e.logged_by_nombre}${e.source === "mcp" ? ", desde un asistente" : ""})` : ""}`).join("\n")
       : "No hay registros con esos filtros.";
     return ok(`${txt}${truncado ? `\n(Hay más; muestro los ${limite} más recientes.)` : ""}`, { eventos: out, truncado });
   }));

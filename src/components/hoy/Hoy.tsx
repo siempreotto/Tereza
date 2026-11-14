@@ -338,7 +338,7 @@ export function Hoy(p: Props) {
                 const quien = p.nombres[e.logged_by ?? ""] ?? "";
                 const cat = CAT[d.cat];
                 const ago = d.enCurso ? null : ahora - ms(e.started_at) < 6 * 3_600_000 ? fHace(ms(e.started_at), ahora) : etiquetaDia(ms(e.started_at), ahora, tz);
-                const detalle = d.detalle + (e.source === "mcp" ? ` · ${quien} desde Claude` : "");
+                const detalle = d.detalle + (e.source === "mcp" ? ` · ${quien} desde un asistente` : "");
                 return cat ? (
                   <LogCard key={e.id} category={cat} title={d.titulo} detail={detalle} time={fHora(ms(e.started_at), tz)} ago={ago} running={d.enCurso} onClick={limitado ? undefined : () => setHoja({ tipo: "detalle", evento: e })} />
                 ) : (

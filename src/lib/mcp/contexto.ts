@@ -32,7 +32,7 @@ const hhmm = (t: string) => t.slice(0, 5);
 /** Contexto por llamada: cliente de Supabase con el token del usuario (RLS), su hogar, rol, ajustes y bebés. */
 export async function crearContexto(auth: AuthInfo | undefined): Promise<Ctx> {
   const userId = auth?.extra?.userId as string | undefined;
-  if (!auth || !userId) throw new ErrorMcp("PERMISO", "Sesión no válida. Vuelve a conectar Tereza en Claude.");
+  if (!auth || !userId) throw new ErrorMcp("PERMISO", "Sesión no válida. Vuelve a conectar Tereza en tu asistente.");
   const db = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     global: { headers: { Authorization: `Bearer ${auth.token}` } },
     auth: { persistSession: false, autoRefreshToken: false },
@@ -41,7 +41,7 @@ export async function crearContexto(auth: AuthInfo | undefined): Promise<Ctx> {
     db.from("mcp_revocados").select("client_id").eq("client_id", auth.clientId).maybeSingle(),
     db.from("members").select("nombre_visible, rol, household_id, households(nombre)").eq("user_id", userId).order("creado_en").limit(1).maybeSingle(),
   ]);
-  if (revocado) throw new ErrorMcp("REVOCADO", "Esta conexión con Claude fue revocada desde la app. Vuelve a conectarla en Más › Conexión con Claude.");
+  if (revocado) throw new ErrorMcp("REVOCADO", "Esta conexión fue revocada desde la app. Vuelve a conectarla en Más › Conexión con asistentes.");
   if (!m) throw new ErrorMcp("SIN_HOGAR", "Tu cuenta todavía no tiene hogar en Tereza. Entra a la app para crearlo o acepta una invitación.");
   const [{ data: s }, { data: bebes }] = await Promise.all([
     db.from("household_settings").select("*").eq("household_id", m.household_id).single(),
