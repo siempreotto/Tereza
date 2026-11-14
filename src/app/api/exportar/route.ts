@@ -43,7 +43,7 @@ export async function GET(req: Request) {
   const filas = [["bebe", "tipo", "fecha", "inicio", "fin", "resumen", "detalle", "notas", "registrado_por", "origen", "inicio_iso", "fin_iso", "datos"]];
   for (const e of eventos) {
     const d = describir(e, opts);
-    filas.push([bebe[e.baby_id] ?? "", e.tipo, fechaISO(new Date(e.started_at).getTime(), a.tz), fHora(new Date(e.started_at).getTime(), a.tz), e.ended_at ? fHora(new Date(e.ended_at).getTime(), a.tz) : "", d.titulo, d.detalle, e.notas ?? "", nombres[e.logged_by ?? ""] ?? "", e.source === "mcp" ? "Claude" : "app", e.started_at, e.ended_at ?? "", JSON.stringify(e.payload)]);
+    filas.push([bebe[e.baby_id] ?? "", e.tipo, fechaISO(new Date(e.started_at).getTime(), a.tz), fHora(new Date(e.started_at).getTime(), a.tz), e.ended_at ? fHora(new Date(e.ended_at).getTime(), a.tz) : "", d.titulo, d.detalle, e.notas ?? "", nombres[e.logged_by ?? ""] ?? "", e.source === "mcp" ? "asistente" : "app", e.started_at, e.ended_at ?? "", JSON.stringify(e.payload)]);
   }
   const csv = "﻿" + filas.map((f) => f.map(celda).join(",")).join("\r\n");
   return new Response(csv, { headers: cab(`tereza-registros-${fecha}.csv`, "text/csv; charset=utf-8") });

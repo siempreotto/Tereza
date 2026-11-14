@@ -4,7 +4,7 @@ import { supabaseBrowser } from "@/lib/supabase/client";
 
 const ROL = { admin: "administras el hogar", cuidador: "eres cuidador", limitado: "tienes acceso limitado" } as const;
 
-// Aprobar o rechazar que Claude use Tereza a nombre de esta persona, con los permisos de su rol.
+// Aprobar o rechazar que el asistente (Claude o ChatGPT) use Tereza a nombre de esta persona, con los permisos de su rol.
 export function Consentimiento({ id, clienteId, cliente, destino, correo, hogar, rol, puede }: { id: string; clienteId: string; cliente: string; destino: string; correo: string; hogar: string; rol: keyof typeof ROL; puede: string[] }) {
   const [ocupado, setOcupado] = useState<"si" | "no" | null>(null);
   const [error, setError] = useState("");
@@ -15,7 +15,7 @@ export function Consentimiento({ id, clienteId, cliente, destino, correo, hogar,
     // Si antes se había revocado este cliente, volver a permitirlo quita el bloqueo.
     if (k === "si" && clienteId) await sb.from("mcp_revocados").delete().eq("client_id", clienteId);
     const { data, error: e } = k === "si" ? await o.approveAuthorization(id, { skipBrowserRedirect: true }) : await o.denyAuthorization(id, { skipBrowserRedirect: true });
-    if (e || !data?.redirect_url) { setOcupado(null); setError("No se pudo completar. La solicitud pudo haber vencido: vuelve a conectar desde Claude."); return; }
+    if (e || !data?.redirect_url) { setOcupado(null); setError("No se pudo completar. La solicitud pudo haber vencido: vuelve a conectar desde tu asistente."); return; }
     window.location.href = data.redirect_url;
   }
   return (
@@ -27,7 +27,7 @@ export function Consentimiento({ id, clienteId, cliente, destino, correo, hogar,
       <ul className="tz-stack" style={{ gap: 8, paddingLeft: 20, margin: 0 }}>
         {puede.map((p) => <li key={p} className="text-body">{p}</li>)}
       </ul>
-      <p className="text-body-sm tz-muted">Con medicamentos solo registra: nunca sugiere ni calcula dosis. Cada registro queda marcado «desde Claude». Puedes revocarlo cuando quieras en Más › Conexión con Claude.</p>
+      <p className="text-body-sm tz-muted">Con medicamentos solo registra: nunca sugiere ni calcula dosis. Cada registro queda marcado «desde un asistente». Puedes revocarlo cuando quieras en Más › Conexión con asistentes.</p>
       {error ? <p role="alert" className="text-body-sm" style={{ color: "var(--danger)" }}>{error}</p> : null}
       <div className="tz-h s8">
         <button type="button" className="tz-btn tz-btn-glass text-button" style={{ flex: 1 }} disabled={!!ocupado} onClick={() => decidir("no")}>{ocupado === "no" ? "Cancelando…" : "No permitir"}</button>

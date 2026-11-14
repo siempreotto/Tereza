@@ -4,11 +4,13 @@
 **Rama:** `main` (cada hito tiene su rama `claude/hito-N-…`)
 **Configuración pendiente:** ver «Pendientes manuales tuyos» abajo y `CONFIGURACION.md`
 
-## Cómo conectar Claude (cuando el OAuth de Supabase esté guardado)
+## Cómo conectar Claude o ChatGPT
 1. En Claude: Ajustes › Conectores › Agregar conector personalizado › URL `https://tereza-kappa.vercel.app/api/mcp`.
 2. Entra con tu cuenta de Tereza y toca «Permitir».
 3. Prueba: «Lucía se durmió a las 2», «¿cuándo fue la última toma?», «dale 4 oz de fórmula hace 20 minutos», «¿cómo durmió esta semana comparada con la anterior?», «anota para el pediatra que tose de noche».
 4. En Claude Code: `claude mcp add --transport http tereza https://tereza-kappa.vercel.app/api/mcp`.
+5. En ChatGPT: Ajustes › Aplicaciones y conectores › Avanzado › Modo desarrollador › Crear, con la misma URL y autenticación OAuth. En cada chat se activa en «+» › Más.
+6. La pantalla de consentimiento solo entrega el acceso a claude.ai, claude.com, chatgpt.com, chat.openai.com o a un cliente local (loopback).
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».

@@ -3,12 +3,12 @@ import { entrarComoPrueba, hayCredencialesE2E } from "./sesion";
 
 test.skip(!hayCredencialesE2E(), "Sin credenciales de prueba");
 
-test("Más › Conexión con Claude muestra la URL del conector", async ({ page, context, baseURL }) => {
+test("Más › Conexión con asistentes muestra la URL del conector", async ({ page, context, baseURL }) => {
   await entrarComoPrueba(context, baseURL!);
   await page.goto("/mas");
   test.skip(page.url().endsWith("/bienvenida"), "Sin hogar");
-  await page.getByRole("link", { name: /Conexión con Claude/ }).click();
-  await expect(page.getByRole("heading", { name: "Conexión con Claude" })).toBeVisible();
+  await page.getByRole("link", { name: /Conexión con asistentes/ }).click();
+  await expect(page.getByRole("heading", { name: "Conexión con Claude y ChatGPT" })).toBeVisible();
   await expect(page.getByText(/\/api\/mcp/).first()).toBeVisible();
 });
 

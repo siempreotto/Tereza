@@ -37,16 +37,24 @@ export default async function ConexionClaude() {
     <Pantalla ajustes={a} activa="mas" rol={c.miembro.rol} bebe={bebe} yo={c.miembro.nombre}>
       <main className="tz-main">
         <Link href="/mas" className="text-body-sm tz-muted">‹ Más</Link>
-        <h1 className="text-title-lg">Conexión con Claude</h1>
+        <h1 className="text-title-lg">Conexión con Claude y ChatGPT</h1>
         <section className="tz-card tz-glass tz-stack" style={{ gap: 10 }} aria-labelledby="c-como">
-          <h2 id="c-como" className="text-title-sm">Cómo conectarla</h2>
+          <h2 id="c-como" className="text-title-sm">Dirección del conector</h2>
+          <p className="text-body"><code style={{ wordBreak: "break-all" }}>{url}</code> <CopiarUrl texto={url} /></p>
+          <h3 className="text-body-strong">En Claude</h3>
           <ol className="tz-stack" style={{ gap: 6, paddingLeft: 20, margin: 0 }}>
-            <li className="text-body">En Claude abre Ajustes › Conectores › Agregar conector personalizado.</li>
-            <li className="text-body">Pega esta dirección: <code style={{ wordBreak: "break-all" }}>{url}</code> <CopiarUrl texto={url} /></li>
+            <li className="text-body">Abre Ajustes › Conectores › Agregar conector personalizado.</li>
+            <li className="text-body">Pega la dirección de arriba.</li>
             <li className="text-body">Entra con tu cuenta de Tereza y toca «Permitir».</li>
           </ol>
           <p className="text-body-sm tz-muted">En Claude Code: <code style={{ wordBreak: "break-all" }}>claude mcp add --transport http tereza {url}</code></p>
-          <p className="text-body-sm tz-muted">Prueba con: «Lucía se durmió a las 2», «¿cuándo fue la última toma?», «dale 4 oz de fórmula hace 20 minutos», «¿cómo durmió esta semana comparada con la anterior?», «anota para el pediatra que tose de noche».</p>
+          <h3 className="text-body-strong">En ChatGPT</h3>
+          <ol className="tz-stack" style={{ gap: 6, paddingLeft: 20, margin: 0 }}>
+            <li className="text-body">Abre Ajustes › Aplicaciones y conectores › Avanzado y activa el Modo desarrollador.</li>
+            <li className="text-body">Toca «Crear», ponle de nombre Tereza, pega la dirección de arriba y elige autenticación OAuth.</li>
+            <li className="text-body">Entra con tu cuenta de Tereza y toca «Permitir». En cada chat, activa Tereza en el menú «+» › Más.</li>
+          </ol>
+          <p className="text-body-sm tz-muted">Prueba con: «{bebe.nombre} despertó a las 6:20 de buen humor», «¿cómo va a estar su día?», «dale 4 oz de fórmula hace 20 minutos», «¿cómo durmió esta semana comparada con la anterior?», «anota para el pediatra que tose de noche».</p>
         </section>
         <section className="tz-stack" style={{ gap: 8 }} aria-labelledby="c-mias">
           <h2 id="c-mias" className="text-title-sm">Tus conexiones</h2>
@@ -56,17 +64,17 @@ export default async function ConexionClaude() {
                 const u = ultimo.get(`${c.userId}|${g.client.id}`);
                 return (
                   <li key={g.client.id} className="tz-row">
-                    <span className="grow"><span className="text-body-strong">{g.client.name || "Claude"}</span><span className="text-body-sm tz-muted">Conectado el {fFecha(new Date(g.granted_at).getTime(), a.tz).toLowerCase()}{u ? ` · último uso ${fHace(new Date(u).getTime(), ahora)}` : " · sin uso todavía"}</span></span>
-                    <Revocar clienteId={g.client.id} nombre={g.client.name || "Claude"} />
+                    <span className="grow"><span className="text-body-strong">{g.client.name || "Asistente"}</span><span className="text-body-sm tz-muted">Conectado el {fFecha(new Date(g.granted_at).getTime(), a.tz).toLowerCase()}{u ? ` · último uso ${fHace(new Date(u).getTime(), ahora)}` : " · sin uso todavía"}</span></span>
+                    <Revocar clienteId={g.client.id} nombre={g.client.name || "Asistente"} />
                   </li>
                 );
               })}
             </ul>
-          ) : <p className="text-body tz-muted">Todavía no conectas Tereza con Claude.</p>}
+          ) : <p className="text-body tz-muted">Todavía no conectas Tereza con un asistente.</p>}
         </section>
         {otros.length ? (
           <section className="tz-stack" style={{ gap: 8 }} aria-labelledby="c-otros">
-            <h2 id="c-otros" className="text-title-sm">Otros cuidadores que usan Claude</h2>
+            <h2 id="c-otros" className="text-title-sm">Otros cuidadores que usan un asistente</h2>
             <ul className="tz-list tz-glass">
               {otros.map(([k, cuando]) => (
                 <li key={k} className="tz-row"><span className="grow"><span className="text-body-strong">{nombre[k.split("|")[0]] ?? "Cuidador"}</span><span className="text-body-sm tz-muted">Último uso {fFecha(new Date(cuando).getTime(), a.tz).toLowerCase()}, {fHora(new Date(cuando).getTime(), a.tz)}</span></span></li>

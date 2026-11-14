@@ -102,7 +102,7 @@ export function Diario({ dia, lunes, ahora, eventos, ajustes: a, nombres, tratam
             <div className="tz-list tz-glass">
               {[...delDia].reverse().map((e) => {
                 const d = describir(e, opts);
-                const detalle = d.detalle + (e.source === "mcp" ? ` · ${nombres[e.logged_by ?? ""] ?? ""} desde Claude` : "");
+                const detalle = d.detalle + (e.source === "mcp" ? ` · ${nombres[e.logged_by ?? ""] ?? ""} desde un asistente` : "");
                 return CAT[d.cat]
                   ? <LogCard key={e.id} category={CAT[d.cat]} title={d.titulo} detail={detalle} time={fHora(ms(e.started_at), tz)} running={d.enCurso} onClick={() => setHoja({ tipo: "detalle", evento: e })} />
                   : <button key={e.id} type="button" className="tz-logcard tz-glass is-action" onClick={() => setHoja({ tipo: "detalle", evento: e })}><span className="tz-icchip" aria-hidden>{d.cat === "temp" ? "🌡" : "✎"}</span><span className="tz-logcard-main"><span className="text-body-strong tz-ink">{d.titulo}</span><span className="text-body-sm tz-muted">{detalle}</span></span><span className="tz-logcard-meta"><span className="text-body-strong tz-ink tz-num">{fHora(ms(e.started_at), tz)}</span></span></button>;
