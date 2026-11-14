@@ -1,7 +1,7 @@
 import "server-only";
 import { supabaseServer } from "@/lib/supabase/server";
 import type { Evento } from "@/lib/core/eventos";
-import type { Hogar } from "@/lib/core/sueno";
+import type { Hogar, PlanFijo } from "@/lib/core/sueno";
 import { inicioDia, sumarDias } from "@/lib/core/tiempo";
 import type { UnidadLongitud, UnidadPeso, UnidadVolumen } from "@/lib/core/unidades";
 
@@ -18,7 +18,7 @@ export async function ajustesDelHogar(hogarId: string): Promise<Ajustes> {
   if (!s) throw new Error("Sin ajustes del hogar");
   return {
     tz: s.zona_horaria, nocheDesde: hhmm(s.sueno_noche_desde), nocheHasta: hhmm(s.sueno_noche_hasta), horaDormir: hhmm(s.hora_dormir),
-    ventanasModo: s.ventanas_modo as "auto" | "propias", ventanasPropias: s.ventanas_propias,
+    ventanasModo: s.ventanas_modo as "auto" | "propias", ventanasPropias: s.ventanas_propias, planModo: s.plan_modo as "auto" | "fijo", planFijo: (s.plan_fijo as PlanFijo | null) ?? null,
     unidadVolumen: s.unidad_volumen as UnidadVolumen, unidadPeso: s.unidad_peso as UnidadPeso, unidadLongitud: s.unidad_longitud as UnidadLongitud,
     nocheUiModo: s.noche_ui_modo as "auto" | "on" | "off", nocheUiDesde: hhmm(s.noche_ui_desde), nocheUiHasta: hhmm(s.noche_ui_hasta), alarmasActivas: s.alarmas_activas,
   };

@@ -18,6 +18,8 @@ export const Payloads = {
     lugar: z.enum(["cuna", "brazos", "carriola", "auto", "otro"]).optional(),
     como_se_durmio: z.enum(["solo", "arrullo", "pecho", "biberon"]).optional(),
     calidad: z.enum(["buena", "regular", "mala"]).optional(),
+    animo_despertar: z.enum(["mal", "neutral", "bien"]).optional(),
+    fin_sueno: z.enum(["natural", "despertado"]).optional(),
   }).strict(),
   toma_pecho: z.object({
     lado_inicial: Lado,

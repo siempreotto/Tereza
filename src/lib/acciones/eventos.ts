@@ -120,7 +120,7 @@ export async function corregirEvento(input: CorregirInput): Promise<Resultado<{ 
 }
 
 /** Cierra el temporizador activo de un tipo. Para toma de pecho, acumula el lado activo. */
-export async function terminarTimer(input: { babyId: string; tipo: "sueno" | "toma_pecho" | "extraccion"; fin?: string; payload?: unknown }): Promise<Resultado<{ evento: Evento; duracionMin: number }>> {
+export async function terminarTimer(input: { babyId: string; tipo: "sueno" | "toma_pecho" | "extraccion"; fin?: string; payload?: unknown; notas?: string | null }): Promise<Resultado<{ evento: Evento; duracionMin: number }>> {
   const s = await sesion();
   if ("error" in s) return { ok: false, error: s.error };
   const { data: activo } = await s.db.from("events").select(COLS).eq("baby_id", input.babyId).eq("tipo", input.tipo).is("ended_at", null).is("eliminado_en", null).maybeSingle();
@@ -132,7 +132,8 @@ export async function terminarTimer(input: { babyId: string; tipo: "sueno" | "to
   }
   let payload = { ...(activo.payload as Record<string, unknown>), ...((input.payload as Record<string, unknown>) ?? {}) };
   if (input.tipo === "toma_pecho") payload = cerrarLado(payload, fin);
-  const r = await corregirEvento({ eventId: activo.id, expectedVersion: activo.version, endedAt: fin, payload });
+  const notas = input.notas?.trim() ? [activo.notas, input.notas.trim()].filter(Boolean).join(" · ").slice(0, 1000) : undefined;
+  const r = await corregirEvento({ eventId: activo.id, expectedVersion: activo.version, endedAt: fin, payload, ...(notas ? { notas } : {}) });
   if (!r.ok) return { ok: false, error: r.error };
   return { ok: true, data: { evento: r.data.evento, duracionMin: (new Date(fin).getTime() - new Date(activo.started_at).getTime()) / 60000 } };
 }

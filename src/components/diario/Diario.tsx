@@ -113,7 +113,7 @@ export function Diario({ dia, lunes, ahora, eventos, ajustes: a, nombres, tratam
           <Link className="tz-link" href="/mas/patrones">Ver patrones de la semana</Link>
         </section>
       </div>
-      <Hojas hoja={hoja} cerrar={() => setHoja(null)} registrar={async () => null} eliminar={eliminar} alCorregir={() => router.refresh()} ajustes={a} ahora={ahora} eventos={eventos} bebe={bebe} tratamientos={tratamientos} limitado={false} nombres={nombres} />
+      <Hojas terminarSueno={async () => null} suenoAhora={null} hoja={hoja} cerrar={() => setHoja(null)} registrar={async () => null} eliminar={eliminar} alCorregir={() => router.refresh()} ajustes={a} ahora={ahora} eventos={eventos} bebe={bebe} tratamientos={tratamientos} limitado={false} nombres={nombres} />
     </main>
   );
 }

@@ -11,24 +11,52 @@ test.beforeEach(async ({ page, context, baseURL }) => {
   test.skip(page.url().endsWith("/bienvenida"), "El usuario de pruebas todavía no tiene hogar");
 });
 
-test("iniciar sueño, despertar y deshacer el despertar", async ({ page }) => {
+// «Despertó» abre su hoja (hora, ánimo, cómo terminó) y guarda con «Guardar despertar».
+async function despertar(page: import("@playwright/test").Page, animo?: string) {
+  await page.getByRole("button", { name: "Despertó", exact: true }).click();
+  const hoja = page.getByRole("dialog");
+  if (animo) await hoja.getByRole("button", { name: animo }).click();
+  await hoja.getByRole("button", { name: "Guardar despertar" }).click();
+}
+
+test("iniciar sueño, despertar con ánimo y deshacer el despertar", async ({ page }) => {
   // Si quedó un sueño abierto de otra corrida, primero lo cierra.
-  if (await page.getByRole("button", { name: "Despertó" }).isVisible()) {
-    await page.getByRole("button", { name: "Despertó" }).click();
+  if (await page.getByRole("button", { name: "Despertó", exact: true }).isVisible()) {
+    await despertar(page);
     await expect(page.getByRole("status")).toContainText("Despertó");
   }
   await page.getByRole("button", { name: "Iniciar sueño" }).click();
   await expect(page.getByRole("status")).toContainText("Empezó el sueño a las");
   await expect(page.getByRole("timer")).toBeVisible();
-  await page.getByRole("button", { name: "Despertó" }).click();
-  await expect(page.getByRole("status")).toContainText("Despertó. Durmió");
+  await despertar(page, "De buen humor");
+  await expect(page.getByRole("status")).toContainText(/Despertó a las .* Durmió/);
   await page.getByRole("button", { name: "Deshacer" }).click();
-  await expect(page.getByRole("button", { name: "Despertó" })).toBeVisible();
-  await page.getByRole("button", { name: "Despertó" }).click();
+  await expect(page.getByRole("button", { name: "Despertó", exact: true })).toBeVisible();
+  await despertar(page);
   // Espera la confirmación del servidor (el cambio en pantalla es optimista).
-  await expect(page.getByRole("status")).toContainText("Despertó. Durmió");
+  await expect(page.getByRole("status")).toContainText(/Despertó a las .* Durmió/);
   await page.reload();
   await expect(page.getByText("Despierta", { exact: true })).toBeVisible();
+  // El plan del día aparece con su siguiente bloque.
+  await expect(page.getByRole("heading", { name: /Plan de hoy/ })).toBeVisible();
+  await expect(page.getByRole("list", { name: "Bloques del día" })).toContainText("Hora de dormir");
+});
+
+test("hora de dormir, despertar nocturno y despertar de la mañana", async ({ page }) => {
+  if (await page.getByRole("button", { name: "Despertó", exact: true }).isVisible()) {
+    await despertar(page);
+    // Espera la confirmación del servidor antes de navegar.
+    await expect(page.getByRole("status")).toContainText(/Despertó a las/);
+  }
+  await page.goto("/?registrar=dormir");
+  await page.getByRole("dialog").getByRole("button", { name: "Guardar hora de dormir" }).click();
+  await expect(page.getByRole("status")).toContainText("Se durmió a las");
+  await page.goto("/?registrar=nocturno");
+  await page.getByRole("dialog").getByRole("button", { name: "Guardar despertar nocturno" }).click();
+  await expect(page.getByRole("status")).toContainText("Despertar nocturno guardado");
+  await expect(page.getByRole("timer")).toBeVisible();
+  await despertar(page);
+  await expect(page.getByRole("status")).toContainText(/Despertó a las/);
 });
 
 test("pañal en un toque y deshacer", async ({ page }) => {

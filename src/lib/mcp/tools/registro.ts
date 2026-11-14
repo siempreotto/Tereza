@@ -4,10 +4,11 @@ import { bebeDe, ErrorMcp, type Ctx } from "../contexto";
 import { COLS, errorDeBase, eventoOut, eventosDesde, hora, nombresMedicamentos, nombresMiembros, normalizarPayload, ok, opcionesDescripcion, type Respuesta } from "../util";
 import { describir, ms, segundosPecho, textoGuardado, TIPOS, TIPOS_LIMITADO, TIPOS_TOMA, type Evento, type Payload, type Tipo } from "@/lib/core/eventos";
 import { alarmaPocosPanales, alarmaTemperatura } from "@/lib/core/alarmas";
-import { edadMeses, predecir } from "@/lib/core/sueno";
+import { edadMeses, esNoche } from "@/lib/core/sueno";
+import { planDelDia } from "@/lib/core/planDia";
 import { edadTexto } from "@/lib/core/edad";
-import { fDuracion, fHace, fHora, inicioDia, MIN, sumarDias } from "@/lib/core/tiempo";
-import { prediccionOut } from "./consultas";
+import { enHora, fDuracion, fHace, fHora, inicioDia, MIN, sumarDias } from "@/lib/core/tiempo";
+import { planOut } from "./consultas";
 
 export const babyId = z.string().optional().describe("ID o nombre del bebé. Si el hogar tiene un solo bebé, se infiere.");
 const horaTexto = (que: string) => z.string().optional().describe(`${que}. Acepta ISO, «14:30», «a las 2», «hace 20 minutos» o «ayer a las 10». Si falta, es ahora.`);
@@ -41,6 +42,10 @@ function alarmaDe(ctx: Ctx, e: Evento, bebe: { fecha_nacimiento: string; semanas
 
 const textoAlarma = (a: { titulo: string; texto: string } | null) => (a ? `\n\nAtención: ${a.titulo}. ${a.texto} (Umbrales pendientes de validar con un pediatra.)` : "");
 
+function desdeLocalHoy(ctx: Ctx, hh: number, mm: number): number {
+  return enHora(inicioDia(ctx.ahora, ctx.ajustes.tz), `${String(hh).padStart(2, "0")}:${String(mm).padStart(2, "0")}`, ctx.ajustes.tz);
+}
+
 export function registrarHerramientasRegistro(server: import("@modelcontextprotocol/server").McpServer, conCtx: <A>(nombre: string, fn: (ctx: Ctx, args: A) => Promise<Respuesta>) => (args: A, extra: unknown) => Promise<Respuesta>) {
   server.registerTool("listar_bebes", {
     title: "Listar bebés del hogar",
@@ -60,7 +65,7 @@ export function registrarHerramientasRegistro(server: import("@modelcontextproto
   }, conCtx("estado_actual", async (ctx, { baby_id }: { baby_id?: string }) => {
     const b = bebeDe(ctx, baby_id);
     const tz = ctx.ajustes.tz;
-    const evs = await eventosDesde(ctx, b.id, sumarDias(inicioDia(ctx.ahora, tz), -8, tz));
+    const evs = await eventosDesde(ctx, b.id, sumarDias(inicioDia(ctx.ahora, tz), -16, tz));
     const [nombres, meds] = await Promise.all([nombresMiembros(ctx), nombresMedicamentos(ctx, b.id)]);
     const desc = (e: Evento | undefined) => (e ? eventoOut(ctx, e, nombres, meds) : null);
     const sueno = evs.find((e) => e.tipo === "sueno" && !e.ended_at);
@@ -69,7 +74,8 @@ export function registrarHerramientasRegistro(server: import("@modelcontextproto
     const panal = evs.find((e) => e.tipo === "panal");
     const med = ctx.rol === "limitado" ? undefined : evs.find((e) => e.tipo === "medicamento");
     const timers = evs.filter((e) => !e.ended_at && (TIMER as readonly string[]).includes(e.tipo));
-    const pred = ctx.rol === "limitado" ? null : predecir(evs, { fechaNacimiento: b.fecha_nacimiento, semanasGestacion: b.semanas_gestacion }, ctx.ahora, ctx.ajustes);
+    const plan = ctx.rol === "limitado" ? null : planOut(ctx, b.nombre, planDelDia(evs, { fechaNacimiento: b.fecha_nacimiento, semanasGestacion: b.semanas_gestacion, nombre: b.nombre }, ctx.ahora, ctx.ajustes));
+    const sig = plan && "siguiente" in plan ? plan.siguiente : null;
     const estado = sueno ? "duerme" : "despierto";
     const desde = sueno ? sueno.started_at : ultimoSueno?.ended_at ?? null;
     const o = opcionesDescripcion(ctx, meds);
@@ -79,12 +85,12 @@ export function registrarHerramientasRegistro(server: import("@modelcontextproto
       panal ? `Último pañal: ${describir(panal, o).detalle.toLowerCase()} a las ${fHora(ms(panal.started_at), tz)}.` : "Sin pañales registrados recientes.",
       med ? `Último medicamento: ${describir(med, o).titulo} a las ${fHora(ms(med.started_at), tz)}.` : null,
       timers.length ? `En curso: ${timers.map((t) => describir(t, o).titulo.toLowerCase()).join(", ")}.` : null,
-      pred?.estado === "ok" ? `${pred.tipo === "siesta" ? "Próxima siesta" : "Hora de dormir"} estimada entre ${fHora(pred.desde, tz)} y ${fHora(pred.hasta, tz)} (confianza ${pred.confianza}).` : null,
+      sig && sig.estado === "estimado" ? `${sig.nombre} estimada ${sig.hora_texto}${plan && "confianza" in plan ? ` (confianza ${plan.confianza})` : ""}.` : null,
     ].filter(Boolean);
     const alarma = ctx.ajustes.alarmasActivas && ctx.rol !== "limitado" ? alarmaPocosPanales(evs, inicioDia(ctx.ahora, tz), ctx.ahora, tz) : null;
     return ok(lineas.join("\n") + textoAlarma(alarma), {
       baby_id: b.id, estado, desde, ultima_toma: desc(toma), ultimo_panal: desc(panal), ...(ctx.rol === "limitado" ? {} : { ultimo_medicamento: desc(med) }),
-      timers_activos: timers.map((t) => desc(t)), prediccion: pred ? prediccionOut(ctx, b.nombre, pred) : null, alarma,
+      timers_activos: timers.map((t) => desc(t)), siguiente_del_plan: sig, alarma,
     });
   }));
 
@@ -114,6 +120,56 @@ export function registrarHerramientasRegistro(server: import("@modelcontextproto
     if (error || !data) throw errorDeBase(error, "iniciar el temporizador");
     const que = a.tipo === "sueno" ? "el sueño" : a.tipo === "toma_pecho" ? `la toma de pecho con el ${a.lado === "der" ? "derecho" : "izquierdo"}` : "la extracción";
     return ok(`Guardé: empezó ${que} a las ${fHora(h.ms, tz)}. (event_id ${data.id})${h.nota ? `\n${h.nota}` : ""}`, { evento: eventoOut(ctx, data as Evento), ya_existia: false, interpretacion_hora: h.nota });
+  }));
+
+  server.registerTool("registrar_despertar", {
+    title: "Registrar que despertó",
+    description: "Guarda la hora en que el bebé despertó (de la noche o de una siesta), con ánimo y si despertó solo o lo despertaron. Si hay un sueño en curso, lo cierra; si no, guarda el sueño desde «se_durmio» (por defecto, la hora de dormir del hogar de anoche). Con despertar_nocturno=true y volvio_a_dormir, parte la noche en dos.",
+    inputSchema: z.object({
+      baby_id: babyId,
+      hora: horaTexto("Cuándo despertó"),
+      se_durmio: z.string().optional().describe("Solo si no hay un sueño en curso: cuándo se durmió"),
+      animo: z.enum(["mal", "neutral", "bien"]).optional(),
+      como_termino: z.enum(["natural", "despertado"]).optional().describe("natural = despertó solo; despertado = lo despertaron"),
+      despertar_nocturno: z.boolean().optional(),
+      volvio_a_dormir: z.string().optional().describe("Para un despertar nocturno: cuándo se volvió a dormir"),
+      notas: z.string().max(500).optional(),
+    }),
+  }, conCtx("registrar_despertar", async (ctx, a: { baby_id?: string; hora?: string; se_durmio?: string; animo?: "mal" | "neutral" | "bien"; como_termino?: "natural" | "despertado"; despertar_nocturno?: boolean; volvio_a_dormir?: string; notas?: string }) => {
+    const b = bebeDe(ctx, a.baby_id);
+    const tz = ctx.ajustes.tz;
+    const h = hora(ctx, a.hora);
+    const extra = { ...(a.animo ? { animo_despertar: a.animo } : {}), ...(a.como_termino ? { fin_sueno: a.como_termino } : {}) };
+    const e = await activo(ctx, b.id, "sueno");
+    let ev: Evento;
+    if (e) {
+      if (h.ms < ms(e.started_at)) throw new ErrorMcp("VALIDACION", `Esa hora es antes de que se durmiera (${fHora(ms(e.started_at), tz)}).`);
+      if (h.ms - ms(e.started_at) > 24 * 3_600_000) throw new ErrorMcp("VALIDACION", "Ese sueño llevaría más de 24 horas. Corrige la hora de inicio con corregir_evento.");
+      const notas = a.notas ? [e.notas, a.notas].filter(Boolean).join(" · ").slice(0, 1000) : e.notas;
+      ev = await actualizar(ctx, e, { ended_at: new Date(h.ms).toISOString(), payload: { ...(e.payload as object), ...extra }, notas });
+    } else {
+      if (a.despertar_nocturno) throw new ErrorMcp("NO_ENCONTRADO", "No hay un sueño en curso para partir. Registra primero la hora de dormir (iniciar_timer con tipo sueno).");
+      let ini = a.se_durmio ? hora(ctx, a.se_durmio).ms : (() => { const [hh, mm] = ctx.ajustes.horaDormir.split(":").map(Number); return desdeLocalHoy(ctx, hh, mm) - 86_400_000; })();
+      if (ini >= h.ms) ini -= 86_400_000;
+      if (h.ms - ini > 24 * 3_600_000) throw new ErrorMcp("VALIDACION", "Ese sueño duraría más de 24 horas. Revisa las horas.");
+      const { data, error } = await ctx.db.from("events").insert({ baby_id: b.id, household_id: ctx.hogarId, tipo: "sueno", started_at: new Date(ini).toISOString(), ended_at: new Date(h.ms).toISOString(), payload: { lugar: "cuna", ...extra }, notas: a.notas ?? null, logged_by: ctx.userId, source: "mcp" }).select(COLS).single();
+      if (error || !data) throw errorDeBase(error, "guardar el despertar");
+      ev = data as Evento;
+    }
+    let nuevo: Evento | null = null;
+    if (a.despertar_nocturno && a.volvio_a_dormir) {
+      const v = Math.max(hora(ctx, a.volvio_a_dormir).ms, h.ms + 60_000);
+      const { data, error } = await ctx.db.from("events").insert({ baby_id: b.id, household_id: ctx.hogarId, tipo: "sueno", started_at: new Date(v).toISOString(), payload: { lugar: (ev.payload as { lugar?: string }).lugar ?? "cuna" }, logged_by: ctx.userId, source: "mcp" }).select(COLS).single();
+      if (error || !data) throw errorDeBase(error, "guardar que se volvió a dormir");
+      nuevo = data as Evento;
+    }
+    const dur = (ms(ev.ended_at!) - ms(ev.started_at)) / MIN;
+    const tipoTxt = a.despertar_nocturno ? "Despertar nocturno" : esNoche(ctx.ajustes)(ms(ev.started_at)) ? "Despertó de la noche" : "Despertó de la siesta";
+    const plan = ctx.rol === "limitado" ? null : planOut(ctx, b.nombre, planDelDia(await eventosDesde(ctx, b.id, sumarDias(inicioDia(ctx.ahora, tz), -16, tz)), { fechaNacimiento: b.fecha_nacimiento, semanasGestacion: b.semanas_gestacion, nombre: b.nombre }, ctx.ahora, ctx.ajustes));
+    const sig = plan && "siguiente" in plan ? plan.siguiente : null;
+    return ok(`Guardé: ${tipoTxt.toLowerCase()} a las ${fHora(h.ms, tz)}; durmió ${fDuracion(dur)} (desde las ${fHora(ms(ev.started_at), tz)}).${nuevo ? ` Se volvió a dormir a las ${fHora(ms(nuevo.started_at), tz)}.` : ""}${h.nota ? `\n${h.nota}` : ""}${sig && sig.estado === "estimado" ? `\nSiguiente en el plan: ${sig.nombre}, ${sig.hora_texto}.` : ""}`, {
+      evento: eventoOut(ctx, ev), volvio_a_dormir: nuevo ? eventoOut(ctx, nuevo) : null, siguiente_del_plan: sig,
+    });
   }));
 
   const lado = async (ctx: Ctx, a: { baby_id?: string; lado?: "izq" | "der" | null }, pausar: boolean | null) => {

@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { StatCard, Icon } from "@/components/tz";
 import { Pantalla } from "@/components/hoy/Pantalla";
 import { ahoraMs, eventosRango, paginaConBebe } from "@/lib/datos/hoy";
-import { edadMeses, estadisticasPeriodo, referenciaSueno, segmentosDelDia, suenoDelDia } from "@/lib/core/sueno";
+import { edadMeses, estadisticasPeriodo, referenciaDia, referenciaSueno, segmentosDelDia, suenoDelDia } from "@/lib/core/sueno";
+import { aprenderPatrones, minutosAHora } from "@/lib/core/planDia";
+import { enHora, fHora } from "@/lib/core/tiempo";
 import { DIAS, DIAS_CORTOS, fDuracion, fFecha, inicioDia, partes, sumarDias } from "@/lib/core/tiempo";
 
 export const metadata: Metadata = { title: "Patrones de sueño · Tereza" };
@@ -18,6 +20,12 @@ export default async function Patrones({ searchParams }: { searchParams: Promise
   const ahora = ahoraMs();
   const fin = sumarDias(inicioDia(ahora, tz), 1 + w * 7, tz), inicio = sumarDias(fin, -7, tz);
   const evs = await eventosRango(bebe.id, inicio, fin);
+  const hoyIni = inicioDia(ahora, tz);
+  const evs14 = await eventosRango(bebe.id, sumarDias(hoyIni, -15, tz), sumarDias(hoyIni, 1, tz));
+  const pat = aprenderPatrones(evs14, ahora, a);
+  const meses = edadMeses(bebe.fecha_nacimiento, ahora, bebe.semanas_gestacion);
+  const refDia = referenciaDia(meses, pat.siestasPorDia ?? undefined);
+  const hm = (m: number | null) => (m == null ? "—" : fHora(enHora(hoyIni, minutosAHora(m), tz), tz));
   const ref = referenciaSueno(edadMeses(bebe.fecha_nacimiento, ahora, bebe.semanas_gestacion));
   const dias = Array.from({ length: 7 }, (_, i) => sumarDias(inicio, i, tz));
   const filas = dias.map((D) => ({ D, segs: segmentosDelDia(evs, D, ahora, a), h: suenoDelDia(evs, D, ahora, a).totalMin / 60, parcial: D === inicioDia(ahora, tz) }));
@@ -39,6 +47,42 @@ export default async function Patrones({ searchParams }: { searchParams: Promise
           </div>
           <p className="text-body-sm tz-muted">{fFecha(inicio, tz)} al {fFecha(sumarDias(fin, -1, tz), tz).toLowerCase()}</p>
         </div>
+        {w === 0 ? (
+          <section className="tz-card lg tz-glass tz-stack s16" aria-labelledby="apr-t">
+            <div className="tz-stack s4">
+              <h2 id="apr-t" className="text-title">Lo que Tereza aprendió</h2>
+              <p className="text-body-sm tz-muted">{pat.diasConDatos >= 3 ? `De sus últimos ${pat.diasConDatos} días con registros de sueño.` : `Registra unos días más para ver sus patrones (van ${pat.diasConDatos}).`}</p>
+            </div>
+            {pat.diasConDatos >= 3 ? (
+              <>
+                <div className="tz-grid2">
+                  <StatCard label="Suele despertar" value={hm(pat.despertarMin)} category="sleep" />
+                  <StatCard label="Suele dormirse" value={hm(pat.dormirMin)} />
+                  <StatCard label="Siestas al día" value={pat.siestasPorDia != null ? String(pat.siestasPorDia) : "—"} caption={Object.keys(pat.conteoSiestas).length > 1 ? `Días con ${Object.entries(pat.conteoSiestas).map(([k, n]) => `${k}: ${n}`).join(" · ")}` : null} />
+                  <StatCard label="Despierta antes de la 1.ª siesta" value={pat.porPosicion[0]?.ventanaPreviaMin != null ? fDuracion(pat.porPosicion[0].ventanaPreviaMin) : "—"} caption={refDia ? `Referencia por edad: ${fDuracion(refDia.ventanas[0][0])} a ${fDuracion(refDia.ventanas[0][1])}` : null} />
+                </div>
+                {pat.porPosicion.length ? (
+                  <ul className="tz-list tz-glass" aria-label="Siestas típicas">
+                    {pat.porPosicion.slice(0, 4).map((x, i) => (
+                      <li key={i} className="tz-row">
+                        <span className="grow"><span className="text-body-strong">Siesta {i + 1}</span><span className="text-body-sm tz-muted">{x.dias} {x.dias === 1 ? "día" : "días"}</span></span>
+                        <span className="text-body-sm tz-num" style={{ textAlign: "right" }}>empieza cerca de las {hm(x.inicioMin)}{x.duracionMin != null ? ` · dura ${fDuracion(x.duracionMin)}` : ""}{x.ventanaPreviaMin != null ? ` · ${fDuracion(x.ventanaPreviaMin)} despierta antes` : ""}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div className="tz-stack s8">
+                  <h3 className="text-body-strong">Franjas donde más duerme</h3>
+                  <div className="tz-heat" role="img" aria-label={`Franjas con más sueño: ${pat.franjas.map((f, i) => (f >= 0.6 ? fHora(enHora(hoyIni, minutosAHora(i * 30), tz), tz) : null)).filter(Boolean).join(", ") || "sin franjas claras todavía"}`}>
+                    {pat.franjas.map((f, i) => <i key={i} style={{ opacity: 0.08 + f * 0.92 }} />)}
+                  </div>
+                  <div className="tz-axis"><span>12 a.m.</span><span>6 a.m.</span><span>12 p.m.</span><span>6 p.m.</span><span>12 a.m.</span></div>
+                  <p className="text-body-sm tz-muted">Más intenso = más días dormida en esa media hora.</p>
+                </div>
+              </>
+            ) : null}
+          </section>
+        ) : null}
         <div className="tz-grid2">
           <StatCard label="Promedio diario" value={st.dias ? fDuracion(st.suenoMin) : "—"} category="sleep" badge={enRef ? "En la referencia" : null} caption={enRef ? null : ref.texto} />
           <StatCard label="Siestas al día" value={st.dias ? (Math.round(st.siestas * 10) / 10).toString() : "—"} unit={st.dias ? `· ${fDuracion(st.siestasMin)}` : undefined} caption={st.dias ? `Noche: ${fDuracion(st.nocheMin)}` : "Faltan registros de esta semana"} />

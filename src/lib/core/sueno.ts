@@ -2,7 +2,8 @@
 import { DIA, enHora, enVentana, fDuracion, HORA, inicioDia, MIN, sumarDias } from "./tiempo";
 import { ms, type Evento } from "./eventos";
 
-export type Hogar = { tz: string; nocheDesde: string; nocheHasta: string; horaDormir: string; ventanasModo: "auto" | "propias"; ventanasPropias: number[] | null };
+export type PlanFijo = { despertar: string; siestas: { inicio: string; duracion_min: number }[]; dormir: string };
+export type Hogar = { tz: string; nocheDesde: string; nocheHasta: string; horaDormir: string; ventanasModo: "auto" | "propias"; ventanasPropias: number[] | null; planModo?: "auto" | "fijo"; planFijo?: PlanFijo | null };
 
 export const esNoche = (h: Pick<Hogar, "tz" | "nocheDesde" | "nocheHasta">) => (inicio: number) => enVentana(inicio, h.nocheDesde, h.nocheHasta, h.tz);
 
@@ -13,16 +14,45 @@ export function referenciaSueno(meses: number): { minH: number; maxH: number; te
   return { minH: 11, maxH: 14, texto: "Referencia por edad: 11 a 14 h" };
 }
 
-/** Ventana de vigilia típica por edad corregida (heurística editable), en minutos. null antes de 8 semanas. */
-export function ventanaVigilia(meses: number): [number, number] | null {
+export type RefDia = {
+  /** Siestas que se usan para el plan cuando no hay registros ni horario propio. */
+  siestas: number;
+  /** Cuántas siestas son habituales a esta edad (para aceptar lo que muestran los registros). */
+  rango: [number, number];
+  /** Ventanas de vigilia por posición, en minutos: antes de la siesta 1, 2, … y antes de dormir. */
+  ventanas: [number, number][];
+  /** Duración habitual de cada siesta, en minutos. */
+  siestaMin: [number, number];
+  /** Texto corto de la referencia («15 meses: 2 siestas, la primera unas 3 a 4 h después de despertar»). */
+  texto: string;
+};
+
+const V = (...xs: [number, number][]) => xs;
+/** Referencia práctica por edad corregida (guía pediátrica de sueño; totales de 24 h según AASM/AAP).
+ *  Con `siestas` se pide la variante para ese número de siestas cuando la edad admite más de una. null antes de 8 semanas. */
+export function referenciaDia(meses: number, siestas?: number): RefDia | null {
+  const t = (n: number, rango: [number, number], ventanas: [number, number][], siestaMin: [number, number]): RefDia => {
+    const h = (m: number) => (m % 60 ? `${Math.floor(m / 60)} h ${m % 60} min` : `${m / 60} h`);
+    const edad = meses < 24 ? `${Math.floor(meses)} meses` : `${Math.floor(meses / 12)} años`;
+    return { siestas: n, rango, ventanas, siestaMin, texto: `Referencia por edad (${edad}): ${n} siesta${n === 1 ? "" : "s"} al día, la primera unas ${h(ventanas[0][0])} a ${h(ventanas[0][1])} después de despertar` };
+  };
+  const pide = (def: number, rango: [number, number]) => Math.max(rango[0], Math.min(rango[1], siestas ?? def));
   if (meses < 1.85) return null;
-  if (meses < 3) return [60, 90];
-  if (meses < 4) return [75, 120];
-  if (meses < 5) return [90, 150];
-  if (meses < 7) return [120, 180];
-  if (meses < 9) return [150, 210];
-  if (meses < 13) return [180, 240];
-  return [240, 360];
+  if (meses < 3) return t(4, [3, 5], V([60, 90], [60, 90], [60, 90], [60, 90], [60, 90]), [30, 120]);
+  if (meses < 4) return t(4, [3, 4], V([75, 120], [75, 120], [75, 120], [90, 120], [90, 120]), [30, 120]);
+  if (meses < 5) return t(3, [3, 4], V([90, 150], [105, 150], [120, 165], [120, 180]), [45, 90]);
+  if (meses < 7) { const n = pide(3, [2, 3]); return n === 3 ? t(3, [2, 3], V([120, 180], [135, 180], [150, 195], [150, 210]), [45, 90]) : t(2, [2, 3], V([135, 180], [150, 210], [165, 210]), [60, 90]); }
+  if (meses < 9) { const n = pide(2, [2, 3]); return n === 3 ? t(3, [2, 3], V([150, 180], [150, 195], [165, 210], [180, 225]), [45, 90]) : t(2, [2, 3], V([150, 210], [165, 210], [180, 240]), [60, 90]); }
+  if (meses < 12) return t(2, [2, 2], V([180, 240], [180, 240], [210, 270]), [60, 90]);
+  if (meses < 15) { const n = pide(2, [1, 2]); return n === 2 ? t(2, [1, 2], V([180, 210], [210, 240], [240, 270]), [45, 90]) : t(1, [1, 2], V([270, 330], [240, 300]), [90, 150]); }
+  if (meses < 18) { const n = pide(2, [1, 2]); return n === 2 ? t(2, [1, 2], V([180, 240], [210, 240], [240, 270]), [45, 90]) : t(1, [1, 2], V([300, 360], [240, 300]), [90, 150]); }
+  if (meses < 36) return t(1, [0, 1], V([300, 360], [240, 330]), [90, 150]);
+  return t(1, [0, 1], V([330, 390], [240, 330]), [60, 120]);
+}
+
+/** Ventana de vigilia antes de la primera siesta por edad corregida, en minutos. null antes de 8 semanas. */
+export function ventanaVigilia(meses: number): [number, number] | null {
+  return referenciaDia(meses)?.ventanas[0] ?? null;
 }
 
 /** Edad en meses (decimal), corregida hasta 24 meses si nació antes de las 37 semanas. */

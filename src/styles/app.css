@@ -323,3 +323,16 @@ a.tz-row, button.tz-row { cursor: pointer; width: 100%; text-align: left; backgr
   .tz-grab { display: none; }
   .tz-toast { left: auto; right: 32px; bottom: 32px; width: 440px; }
 }
+
+/* Plan de hoy: lista de bloques con punto y línea */
+.tz-plan { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.tz-plan-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; position: relative; }
+.tz-plan-item + .tz-plan-item::before { content: ""; position: absolute; left: 23px; top: -10px; height: 20px; width: 2px; background: var(--line); }
+.tz-plan-dot { width: 24px; height: 24px; border-radius: 999px; border: 2px dashed var(--cat-sleep); display: grid; place-items: center; font-size: 13px; color: var(--on-primary); flex: none; background: var(--surface); position: relative; z-index: 1; }
+.tz-plan-item.hecho .tz-plan-dot { border-style: solid; background: var(--cat-sleep); }
+.tz-plan-item.on { background: var(--primary-soft); }
+.tz-plan-item.on .tz-plan-dot { border-style: solid; border-color: var(--primary); }
+
+/* Franjas de sueño aprendidas (48 medias horas) */
+.tz-heat { display: grid; grid-template-columns: repeat(48, 1fr); gap: 2px; height: 28px; }
+.tz-heat i { display: block; border-radius: 3px; background: var(--cat-sleep); }

@@ -21,6 +21,9 @@ const ICONS = {
   "chevron-right": ["M9 6l6 6-6 6"],
   "chevron-left": ["M15 6l-6 6 6 6"],
   check: ["M5 12.5l4.5 4.5L19 7.5"],
+  sunrise: ["M3 18h18", "M7 18a5 5 0 0 1 10 0", "M12 5v3", "M5.6 10.6l1.4 1.4", "M18.4 10.6 17 12", "M8 21.5h8"],
+  nap: ["M7 18.5h10a4 4 0 0 0 .4-7.98A6 6 0 0 0 6 11.3a3.6 3.6 0 0 0 1 7.2Z"],
+  burst: ["M12 3v3", "M12 18v3", "M3 12h3", "M18 12h3", "M5.6 5.6l2.1 2.1", "M16.3 16.3l2.1 2.1", "M5.6 18.4l2.1-2.1", "M16.3 7.7l2.1-2.1"],
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -8,7 +8,7 @@ import type { HojaAbierta } from "@/components/hoy/Hojas";
 
 export const dynamic = "force-dynamic";
 
-const HOJAS = ["sueno", "toma", "panal", "medicamento", "temperatura", "nota"] as const;
+const HOJAS = ["sueno", "desperto", "dormir", "nocturno", "toma", "panal", "medicamento", "temperatura", "nota"] as const;
 
 export default async function Inicio({ searchParams }: { searchParams: Promise<{ registrar?: string }> }) {
   const { registrar } = await searchParams;

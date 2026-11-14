@@ -93,6 +93,15 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Todo en verde antes de publicar: lint, typecheck, 52 unitarias, 8 de integración MCP, 42 e2e en móvil y escritorio
 - [x] Publicado en producción (`main`, a39ad40): `/api/salud` conectado, `/api/mcp` responde 401 con metadatos OAuth correctos; 16 e2e de navegador pasan contra producción
 
+## Plan del día de sueño y patrones (después del Hito 7)
+- [x] Registrar por separado: **Despertó** (hora, ánimo, si despertó sola o la despertaron, comentario), **Siesta**, **Hora de dormir** y **Despertar nocturno** (parte la noche en dos)
+- [x] **Plan de hoy · estimación** en Hoy: cuenta regresiva al siguiente bloque («Primera siesta en 1 h 40 min · cerca de las 9:50»), reloj de 24 h y lista de bloques (despertar, siestas con duración, hora de dormir), cada uno con su fuente
+- [x] Referencia por edad por número de siestas (a los 15 meses: 2 siestas, la primera unas 3 a 4 h después de despertar); cuando hay 3 días o más de registros, el plan usa lo aprendido (y detecta el paso de 2 a 1 siesta)
+- [x] **Más › Ajustes**: siestas y horario (Automático o Horario fijo: número de siestas, horas y duraciones, despertar y dormir), noche, modo noche, unidades y zona horaria
+- [x] **Patrones › Lo que Tereza aprendió**: hora habitual de despertar y de dormir, siestas al día, duración y ventana de cada siesta, franjas del día donde más duerme
+- [x] Claude: `plan_del_dia`, `registrar_despertar` (incluye despertar nocturno), y horario fijo en `cambiar_configuracion`
+- [x] Pruebas: 61 unitarias, 10 de integración MCP, e2e (despertar con ánimo, noche partida, horario fijo) y AA en Ajustes
+
 ## Pendientes manuales tuyos
 - **Supabase › Authentication › OAuth Server: presiona «Save changes».** Los interruptores se ven encendidos, pero el servidor sigue respondiendo «OAuth server is disabled». Sin esto Claude no puede conectarse.
 - Supabase › Authentication › Providers › Google: confirma que presionaste «Save» (Google ya está activado en la pantalla de entrar).

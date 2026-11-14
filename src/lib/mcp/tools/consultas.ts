@@ -4,22 +4,50 @@ import type { McpServer } from "@modelcontextprotocol/server";
 import { bebeDe, ErrorMcp, type Ctx } from "../contexto";
 import { COLS, dia, eventoOut, eventosDesde, nombresMedicamentos, nombresMiembros, ok, type Respuesta } from "../util";
 import { ms, TIPOS, TIPOS_LIMITADO, type Evento, type Tipo } from "@/lib/core/eventos";
-import { edadMeses, estadisticasPeriodo, predecir, referenciaSueno, suenoDelDia, ventanaVigilia, esNoche, type Estadisticas, type Prediccion } from "@/lib/core/sueno";
+import { edadMeses, estadisticasPeriodo, referenciaSueno, suenoDelDia, ventanaVigilia, esNoche, type Estadisticas } from "@/lib/core/sueno";
+import { aprenderPatrones, cuentaRegresiva, minutosAHora, nombreBloque, planDelDia, type Bloque, type PlanDia } from "@/lib/core/planDia";
 import { DIA, fDuracion, fechaISO, fFecha, fHora, inicioDia, MIN, partes, sumarDias } from "@/lib/core/tiempo";
 import { fVolumen } from "@/lib/core/unidades";
 
 type ConCtx = <A>(nombre: string, fn: (ctx: Ctx, args: A) => Promise<Respuesta>) => (args: A, extra: unknown) => Promise<Respuesta>;
 const babyId = z.string().optional().describe("ID o nombre del bebé. Si el hogar tiene un solo bebé, se infiere.");
 
-export function prediccionOut(ctx: Ctx, nombre: string, p: Prediccion) {
-  const nota = `Estimación basada en la edad de ${nombre} y en sus últimos registros`;
-  if (p.estado === "durmiendo") return { tipo: null, razon_sin_prediccion: `${nombre} está dormida ahora; la estimación aparece cuando despierte.`, nota };
-  if (p.estado === "sin_prediccion") return { tipo: null, razon_sin_prediccion: p.razon, nota };
+const FUENTE_TXT: Record<Bloque["fuente"], string> = { registro: "registrado", registros: "según sus registros", edad: "referencia por edad", horario: "horario fijo del hogar" };
+
+/** Plan del día para Claude: bloques con horas legibles, siguiente bloque y texto. */
+export function planOut(ctx: Ctx, nombre: string, p: PlanDia) {
+  const tz = ctx.ajustes.tz;
+  if (p.estado !== "ok") return { estado: p.estado, razon: p.razon, texto: p.razon };
+  const bloque = (b: Bloque) => ({
+    tipo: b.tipo, n: b.n ?? null, nombre: nombreBloque(b, p.siestas), estado: b.estado, fuente: b.fuente,
+    desde: new Date(b.desde).toISOString(), hasta: new Date(b.hasta).toISOString(),
+    hora_texto: b.estado === "estimado" ? (b.tipo === "despertar" ? `cerca de las ${fHora(b.hora, tz)}` : `entre ${fHora(b.desde, tz)} y ${fHora(b.hasta, tz)}`) : fHora(b.hora, tz),
+    fin_texto: b.fin ? fHora(b.fin, tz) : null, duracion_min: b.duracionMin ?? null, por_que: b.porQue,
+  });
+  const cr = cuentaRegresiva(p, ctx.ahora, tz);
+  const lineas = p.bloques.map((b) => {
+    const x = bloque(b);
+    const dur = b.tipo === "siesta" && b.duracionMin ? ` (${b.estado === "hecho" ? "" : "≈ "}${fDuracion(b.duracionMin)})` : "";
+    return `• ${x.nombre}: ${b.estado === "hecho" ? (b.tipo === "siesta" && b.fin ? `${fHora(b.desde, tz)} a ${fHora(b.fin, tz)}` : x.hora_texto) + " ✓" : b.estado === "en_curso" ? `en curso desde ${fHora(b.desde, tz)}` : x.hora_texto}${dur} — ${FUENTE_TXT[b.fuente]}`;
+  });
+  const texto = [
+    `Plan de hoy para ${nombre} (estimación, confianza ${p.confianza}):`,
+    ...lineas,
+    cr ? `Siguiente: ${cr.titulo}${cr.detalle ? `, ${cr.detalle}` : ""}.` : null,
+    p.fuenteSiestas === "edad" ? `${p.referencia.texto}.` : p.fuenteSiestas === "horario" ? "Sigue el horario fijo que configuró el hogar." : `En sus últimos días hizo ${p.siestas} siesta${p.siestas === 1 ? "" : "s"}.`,
+    ...p.avisos,
+    p.nota,
+  ].filter(Boolean).join("\n");
   return {
-    tipo: p.tipo, desde: new Date(p.desde).toISOString(), hasta: new Date(p.hasta).toISOString(),
-    desde_texto: fHora(p.desde, ctx.ajustes.tz), hasta_texto: fHora(p.hasta, ctx.ajustes.tz),
-    confianza: p.confianza, base: p.base, rango_edad_min: p.rangoEdadMin, avisos: p.avisos, usa_ventanas_propias: p.usaVentanasPropias, nota,
+    estado: "ok", confianza: p.confianza, siestas: p.siestas, fuente_siestas: p.fuenteSiestas, referencia: p.referencia.texto,
+    bloques: p.bloques.map(bloque), siguiente: p.siguiente ? bloque(p.siguiente) : null, cuenta_regresiva: cr, avisos: p.avisos, nota: p.nota, texto,
   };
+}
+
+export async function calcularPlan(ctx: Ctx, b: { id: string; nombre: string; fecha_nacimiento: string; semanas_gestacion: number | null }) {
+  const tz = ctx.ajustes.tz;
+  const evs = await eventosDesde(ctx, b.id, sumarDias(inicioDia(ctx.ahora, tz), -16, tz));
+  return planDelDia(evs, { fechaNacimiento: b.fecha_nacimiento, semanasGestacion: b.semanas_gestacion, nombre: b.nombre }, ctx.ahora, ctx.ajustes);
 }
 
 /** Rango [desde, hasta) en ms según el período pedido, en la zona del hogar. */
@@ -86,6 +114,15 @@ function textoResumen(ctx: Ctx, nombre: string, etiqueta: string, r: ReturnType<
 
 function limitarLimitado(ctx: Ctx, desde: number) {
   if (ctx.rol === "limitado" && desde < inicioDia(ctx.ahora, ctx.ajustes.tz)) throw new ErrorMcp("PERMISO", "Tu rol (limitado) ve solo lo de hoy. Para días anteriores, pídeselo a un cuidador o a quien administra el hogar.");
+}
+
+function patronesOut(p: ReturnType<typeof aprenderPatrones>) {
+  const hh = (m: number | null) => (m == null ? null : minutosAHora(m));
+  return {
+    dias_con_datos: p.diasConDatos, despertar_habitual: hh(p.despertarMin), dormir_habitual: hh(p.dormirMin), siestas_por_dia: p.siestasPorDia,
+    siestas: p.porPosicion.map((x, i) => ({ n: i + 1, inicio_habitual: hh(x.inicioMin), duracion_min: x.duracionMin, despierta_antes_min: x.ventanaPreviaMin, dias: x.dias })),
+    franjas_con_mas_sueno: p.franjas.map((f, i) => ({ desde: minutosAHora(i * 30), fraccion: Math.round(f * 100) / 100 })).filter((x) => x.fraccion >= 0.6).map((x) => x.desde),
+  };
 }
 
 const mediana = (a: number[]) => { if (!a.length) return null; const s = [...a].sort((x, y) => x - y); return s[Math.floor(s.length / 2)]; };
@@ -237,24 +274,37 @@ export function registrarHerramientasConsulta(server: McpServer, conCtx: ConCtx)
       horarios: { dormir_mediana: dormir.length ? hhmm(mediana(dormir)!) : null, despertar_mediana: despertar.length ? hhmm(mediana(despertar)!) : null },
       ventanas_vigilia: { mediana_min: medV != null ? Math.round(medV) : null, dispersion_min: dispersion, referencia_edad_min: rv },
       dias_atipicos, datos_faltantes, aviso_pediatra,
+      patrones_aprendidos: patronesOut(aprenderPatrones(evs, ctx.ahora, ctx.ajustes)),
     });
   }));
 
   server.registerTool("predecir_proximo_sueno", {
     title: "Estimar el próximo sueño",
-    description: "Franja estimada de la próxima siesta u hora de dormir, con confianza, en qué se basa y avisos. Es una estimación por edad y registros recientes, no una indicación.",
+    description: "Siguiente bloque del plan del día (siesta u hora de dormir): franja estimada, cuánto falta, en qué se basa y avisos. Es una estimación por edad y registros recientes, no una indicación.",
     inputSchema: z.object({ baby_id: babyId }),
     annotations: { readOnlyHint: true },
   }, conCtx("predecir_proximo_sueno", async (ctx, a: { baby_id?: string }) => {
     const b = bebeDe(ctx, a.baby_id);
     if (ctx.rol === "limitado") throw new ErrorMcp("PERMISO", "Tu rol (limitado) no incluye estimaciones. Puedes ver el estado actual.");
-    const tz = ctx.ajustes.tz;
-    const evs = await eventosDesde(ctx, b.id, sumarDias(inicioDia(ctx.ahora, tz), -8, tz));
-    const p = predecir(evs, { fechaNacimiento: b.fecha_nacimiento, semanasGestacion: b.semanas_gestacion }, ctx.ahora, ctx.ajustes);
-    const out = prediccionOut(ctx, b.nombre, p);
-    const txt = "desde_texto" in out
-      ? `${out.tipo === "siesta" ? "Próxima siesta" : "Hora de dormir"}: entre ${out.desde_texto} y ${out.hasta_texto} (confianza ${out.confianza}). ${out.base}${out.avisos?.length ? ` ${out.avisos.join(" ")}` : ""}\n${out.nota}.`
-      : out.razon_sin_prediccion;
-    return ok(txt, out);
+    const out = planOut(ctx, b.nombre, await calcularPlan(ctx, b));
+    if (out.estado !== "ok" || !("siguiente" in out)) return ok(out.texto, out);
+    const s = out.siguiente;
+    const txt = s
+      ? `${out.cuenta_regresiva?.titulo ?? s.nombre}${out.cuenta_regresiva?.detalle ? `, ${out.cuenta_regresiva.detalle}` : ""}. ${s.nombre}: ${s.hora_texto}${s.duracion_min ? `, ≈ ${fDuracion(s.duracion_min)}` : ""} (confianza ${out.confianza}). ${s.por_que}${out.avisos.length ? ` ${out.avisos.join(" ")}` : ""}\n${out.nota}`
+      : `El plan de hoy ya está completo.\n${out.nota}`;
+    return ok(txt, { siguiente: s, cuenta_regresiva: out.cuenta_regresiva, confianza: out.confianza, avisos: out.avisos, nota: out.nota });
   }));
+
+  server.registerTool("plan_del_dia", {
+    title: "Plan del día de sueño",
+    description: "Cómo se estima el día: hora de despertar, cada siesta (franja y duración) y hora de dormir, marcando lo ya registrado. Usa los registros del bebé, la referencia por edad o el horario fijo del hogar. Es una estimación, no una indicación.",
+    inputSchema: z.object({ baby_id: babyId }),
+    annotations: { readOnlyHint: true },
+  }, conCtx("plan_del_dia", async (ctx, a: { baby_id?: string }) => {
+    const b = bebeDe(ctx, a.baby_id);
+    if (ctx.rol === "limitado") throw new ErrorMcp("PERMISO", "Tu rol (limitado) no incluye el plan del día. Puedes ver el estado actual.");
+    const out = planOut(ctx, b.nombre, await calcularPlan(ctx, b));
+    return ok(out.texto, out);
+  }));
+
 }

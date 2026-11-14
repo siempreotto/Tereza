@@ -17,6 +17,9 @@ import type { Bebe } from "./Hoy";
 export type HojaAbierta =
   | { tipo: "agregar" }
   | { tipo: "sueno" }
+  | { tipo: "desperto" }
+  | { tipo: "dormir" }
+  | { tipo: "nocturno" }
   | { tipo: "toma"; pestana?: "pecho" | "biberon" | "solidos" | "extraccion" }
   | { tipo: "panal" }
   | { tipo: "medicamento" }
@@ -26,10 +29,14 @@ export type HojaAbierta =
 
 type Registrar = (input: Parameters<typeof registrarEvento>[0], mensaje?: string) => Promise<Evento | null>;
 
+type TerminarSueno = (o?: { fin?: number; payload?: Record<string, unknown>; notas?: string | null; deshacer?: boolean }) => Promise<Evento | null>;
+
 type Props = {
   hoja: HojaAbierta | null;
   cerrar: () => void;
   registrar: Registrar;
+  terminarSueno: TerminarSueno;
+  suenoAhora: Evento | null;
   eliminar: (e: Evento) => Promise<void>;
   alCorregir: (e: Evento) => void;
   ajustes: Ajustes;
@@ -68,6 +75,9 @@ export function Hojas(p: Props) {
   if (!hoja) return null;
   switch (hoja.tipo) {
     case "sueno": return <HojaSueno {...p} />;
+    case "desperto": return <HojaDesperto {...p} />;
+    case "dormir": return <HojaDormir {...p} />;
+    case "nocturno": return <HojaNocturno {...p} />;
     case "toma": return <HojaToma {...p} pestana={hoja.pestana} />;
     case "panal": return <HojaPanal {...p} />;
     case "medicamento": return <HojaMedicamento {...p} />;
@@ -120,7 +130,7 @@ function HojaSueno({ cerrar, registrar, ahora, ajustes: a, eventos }: Props) {
     cerrar();
   };
   return (
-    <Sheet titulo="Sueño" cat="sleep" onClose={cerrar}>
+    <Sheet titulo="Siesta o sueño" cat="sleep" onClose={cerrar}>
       <Seg label="Tipo de registro" value={modo} onChange={setModo} options={[{ v: "ahora", l: "Empezar ahora" }, { v: "pasado", l: "Uno que ya pasó" }]} />
       {modo === "ahora" && activo ? <div className="tz-alert info" role="note"><div className="tz-stack s4"><p className="text-body-strong tz-alert-title">Ya hay un sueño en curso</p><p className="text-body-sm">Empezó a las {fHora(ms(activo.started_at), a.tz)}. Si guardas, verás ese mismo; no se duplica.</p></div></div> : null}
       {modo === "pasado" ? (
@@ -135,6 +145,115 @@ function HojaSueno({ cerrar, registrar, ahora, ajustes: a, eventos }: Props) {
       <Field label="Dónde durmió"><Chips options={[...LUGARES]} value={lugar} onChange={(v) => setLugar(v ?? "cuna")} /></Field>
       <Field label="Cómo se durmió"><Chips options={[...COMOS]} value={como} onChange={(v) => setComo(v ?? "solo")} /></Field>
       <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar}>{modo === "ahora" ? "Iniciar sueño" : "Guardar sueño"}</Button></div>
+    </Sheet>
+  );
+}
+
+const ANIMOS = [{ v: "mal", l: "De mal humor" }, { v: "neutral", l: "Normal" }, { v: "bien", l: "De buen humor" }] as const;
+const FINES = [{ v: "natural", l: "Despertó solo" }, { v: "despertado", l: "Lo despertamos" }] as const;
+
+/** Hora grande con «hoy» o «ayer» debajo; se edita con el selector de hora. */
+function HoraGrande({ id, label, value, onChange, tz, ahora }: { id: string; label: string; value: number; onChange: (n: number) => void; tz: string; ahora: number }) {
+  const dia = inicioDia(value, tz) === inicioDia(ahora, tz) ? "Hoy" : "Ayer";
+  return (
+    <div className="tz-stack s4" style={{ alignItems: "center", textAlign: "center" }}>
+      <label className="text-label tz-muted" htmlFor={id}>{label}</label>
+      <p className="text-display tz-num" aria-hidden>{fHora(value, tz)}</p>
+      <span className="text-body-sm tz-muted">{dia}</span>
+      <div style={{ maxWidth: 180, width: "100%" }}><TimeInput id={id} label={label} value={value} onChange={onChange} tz={tz} ahora={ahora} /></div>
+    </div>
+  );
+}
+
+/** Despertó: cierra el sueño en curso o, si no hay, guarda la noche (se durmió → despertó). */
+function HojaDesperto({ cerrar, registrar, terminarSueno, suenoAhora, ahora, ajustes: a }: Props) {
+  const tz = a.tz;
+  const [fin, setFin] = useState(ahora);
+  const ayer = enHora(inicioDia(ahora, tz) - DIA / 2, a.horaDormir, tz);
+  const [inicio, setInicio] = useState(suenoAhora ? ms(suenoAhora.started_at) : ayer);
+  const [animo, setAnimo] = useState<"mal" | "neutral" | "bien" | null>(null);
+  const [finSueno, setFinSueno] = useState<"natural" | "despertado" | null>("natural");
+  const [notas, setNotas] = useState("");
+  const [ocupado, setOcupado] = useState(false);
+  const extra = { ...(animo ? { animo_despertar: animo } : {}), ...(finSueno ? { fin_sueno: finSueno } : {}) };
+  const esNocheIni = esNoche(a)(suenoAhora ? ms(suenoAhora.started_at) : inicio);
+  const guardar = async () => {
+    setOcupado(true);
+    if (suenoAhora) await terminarSueno({ fin, payload: extra, notas: notas || null });
+    else {
+      const ini = inicio >= fin ? inicio - DIA : inicio;
+      await registrar({ babyId: "", tipo: "sueno", startedAt: iso(ini), endedAt: iso(fin), payload: { lugar: "cuna", ...extra }, notas: notas.trim() || null }, `Despertó a las ${fHora(fin, tz)}. Durmió ${fDuracion((fin - ini) / MIN)}`);
+    }
+    cerrar();
+  };
+  return (
+    <Sheet titulo={suenoAhora && !esNocheIni ? "Despertó de la siesta" : "Despertó"} cat="sleep" onClose={cerrar}>
+      <HoraGrande id="dp-fin" label="Despertó a las" value={fin} onChange={setFin} tz={tz} ahora={ahora} />
+      {suenoAhora ? (
+        <p className="text-body-sm tz-muted" style={{ textAlign: "center" }}>Dormía desde las {fHora(ms(suenoAhora.started_at), tz)} · {fDuracion(Math.max(0, fin - ms(suenoAhora.started_at)) / MIN)}</p>
+      ) : (
+        <Field label="Se durmió (anoche o en la siesta)" id="dp-ini"><TimeInput id="dp-ini" label="Se durmió" value={inicio} onChange={setInicio} tz={tz} ahora={ahora} /></Field>
+      )}
+      <Field label="¿Cómo despertó?"><Chips options={[...ANIMOS]} value={animo} onChange={setAnimo} /></Field>
+      <Field label="¿Cómo terminó?"><Chips options={[...FINES]} value={finSueno} onChange={setFinSueno} /></Field>
+      <Field label="Comentario (opcional)" id="dp-n"><textarea id="dp-n" className="tz-input" rows={2} maxLength={500} value={notas} onChange={(e) => setNotas(e.target.value)} /></Field>
+      <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar} disabled={ocupado}>Guardar despertar</Button></div>
+    </Sheet>
+  );
+}
+
+/** Hora de dormir: empieza el sueño de la noche (ahora o a la hora indicada). */
+function HojaDormir({ cerrar, registrar, suenoAhora, ahora, ajustes: a }: Props) {
+  const tz = a.tz;
+  const [ini, setIni] = useState(ahora);
+  const [lugar, setLugar] = useState<Payload<"sueno">["lugar"]>("cuna");
+  const [como, setComo] = useState<Payload<"sueno">["como_se_durmio"]>("solo");
+  const guardar = async () => {
+    await registrar({ babyId: "", tipo: "sueno", startedAt: iso(ini), endedAt: null, payload: { lugar, como_se_durmio: como } }, `Se durmió a las ${fHora(ini, tz)}. Buenas noches`);
+    cerrar();
+  };
+  return (
+    <Sheet titulo="Hora de dormir" cat="sleep" onClose={cerrar}>
+      {suenoAhora ? <div className="tz-alert info" role="note"><p className="text-body-sm">Ya hay un sueño en curso desde las {fHora(ms(suenoAhora.started_at), tz)}. Si guardas, verás ese mismo; no se duplica.</p></div> : null}
+      <HoraGrande id="dr-ini" label="Se durmió a las" value={ini} onChange={setIni} tz={tz} ahora={ahora} />
+      <Field label="Dónde durmió"><Chips options={[...LUGARES]} value={lugar} onChange={(v) => setLugar(v ?? "cuna")} /></Field>
+      <Field label="Cómo se durmió"><Chips options={[...COMOS]} value={como} onChange={(v) => setComo(v ?? "solo")} /></Field>
+      <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar}>Guardar hora de dormir</Button></div>
+    </Sheet>
+  );
+}
+
+/** Despertar nocturno: parte la noche en dos (cierra el sueño y, si volvió a dormirse, abre otro). */
+function HojaNocturno({ cerrar, registrar, terminarSueno, suenoAhora, ahora, ajustes: a }: Props) {
+  const tz = a.tz;
+  const [desperto, setDesperto] = useState(Math.min(ahora, Math.max(suenoAhora ? ms(suenoAhora.started_at) + MIN : 0, ahora - 20 * MIN)));
+  const [volvio, setVolvio] = useState(ahora);
+  const [sigue, setSigue] = useState(false);
+  const [notas, setNotas] = useState("");
+  if (!suenoAhora) {
+    return (
+      <Sheet titulo="Despertar nocturno" cat="sleep" onClose={cerrar}>
+        <p className="text-body">No hay un sueño en curso. Primero registra la hora de dormir; luego podrás anotar cada despertar de la noche.</p>
+        <div className="tz-sheet-actions"><Button variant="glass" block onClick={cerrar}>Entendido</Button></div>
+      </Sheet>
+    );
+  }
+  const guardar = async () => {
+    const ev = await terminarSueno({ fin: desperto, notas: notas || null, deshacer: false });
+    const vuelta = Math.min(Math.max(ahora, desperto), Math.max(volvio, desperto));
+    if (ev && !sigue) await registrar({ babyId: "", tipo: "sueno", startedAt: iso(vuelta), endedAt: null, payload: { lugar: (ev.payload as Payload<"sueno">).lugar ?? "cuna" } }, `Despertar nocturno guardado: de ${fHora(desperto, tz)} a ${fHora(vuelta, tz)}`);
+    cerrar();
+  };
+  return (
+    <Sheet titulo="Despertar nocturno" cat="sleep" onClose={cerrar}>
+      <div className="tz-timefield">
+        <Field label="Despertó" id="nc-d"><TimeInput id="nc-d" label="Despertó" value={desperto} onChange={setDesperto} tz={tz} ahora={ahora} /></Field>
+        {sigue ? null : <Field label="Se volvió a dormir" id="nc-v"><TimeInput id="nc-v" label="Se volvió a dormir" value={volvio} onChange={setVolvio} tz={tz} ahora={ahora} /></Field>}
+      </div>
+      {!sigue ? <p className="tz-help tz-num">Despierta {fDuracion(Math.max(0, volvio - desperto) / MIN)}</p> : null}
+      <Seg label="¿Ya se durmió?" value={sigue ? "no" : "si"} onChange={(v) => setSigue(v === "no")} options={[{ v: "si", l: "Volvió a dormirse" }, { v: "no", l: "Sigue despierta" }]} />
+      <Field label="Comentario (opcional)" id="nc-n"><textarea id="nc-n" className="tz-input" rows={2} maxLength={500} value={notas} onChange={(e) => setNotas(e.target.value)} /></Field>
+      <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar}>Guardar despertar nocturno</Button></div>
     </Sheet>
   );
 }

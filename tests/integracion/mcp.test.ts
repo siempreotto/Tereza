@@ -42,7 +42,7 @@ describe.skipIf(!hay)("servidor MCP", () => {
 
   it("lista todas las herramientas", async () => {
     const t = await listar();
-    for (const n of ["listar_bebes", "estado_actual", "iniciar_timer", "cambiar_lado", "pausar_toma", "terminar_timer", "registrar_evento", "corregir_evento", "eliminar_evento", "deshacer_eliminacion", "consultar_eventos", "resumen", "analizar_periodo", "predecir_proximo_sueno", "registrar_medida", "registrar_medicamento", "gestionar_tratamiento", "agregar_duda_pediatra", "resolver_duda", "ver_proxima_cita", "fijar_proxima_cita", "resumen_pediatra", "ver_configuracion", "cambiar_configuracion", "invitar_cuidador"]) expect(t).toContain(n);
+    for (const n of ["listar_bebes", "estado_actual", "iniciar_timer", "cambiar_lado", "pausar_toma", "terminar_timer", "registrar_evento", "corregir_evento", "eliminar_evento", "deshacer_eliminacion", "consultar_eventos", "resumen", "analizar_periodo", "predecir_proximo_sueno", "registrar_medida", "registrar_medicamento", "gestionar_tratamiento", "agregar_duda_pediatra", "resolver_duda", "ver_proxima_cita", "fijar_proxima_cita", "resumen_pediatra", "ver_configuracion", "cambiar_configuracion", "invitar_cuidador", "plan_del_dia", "registrar_despertar"]) expect(t).toContain(n);
   });
 
   it("estado actual y bebés", async () => {
@@ -112,6 +112,35 @@ describe.skipIf(!hay)("servidor MCP", () => {
     const e = await llamar(C, "estado_actual");
     expect(e.datos).not.toHaveProperty("ultimo_medicamento");
     await llamar(C, "eliminar_evento", { event_id: (p.datos.evento as { event_id: string }).event_id });
+  });
+
+  it("plan del día y despertar con ánimo", async () => {
+    // Si había un sueño en curso de otra corrida, lo cierra registrando el despertar.
+    const d = await llamar(A, "registrar_despertar", { hora: "hace 5 minutos", se_durmio: "ayer a las 7 de la noche", animo: "bien", como_termino: "natural" });
+    expect(d.error, d.texto).toBe(false);
+    const ev = d.datos.evento as { event_id: string; payload: { animo_despertar?: string } };
+    expect(ev.payload.animo_despertar).toBe("bien");
+    const p = await llamar(A, "plan_del_dia", {});
+    expect(p.error, p.texto).toBe(false);
+    expect(p.texto).toContain("Plan de hoy");
+    expect(p.texto).not.toMatch(/deber[ií]a|científic/i);
+    const bloques = p.datos.bloques as { tipo: string }[];
+    expect(bloques[0].tipo).toBe("despertar");
+    expect(bloques.at(-1)!.tipo).toBe("dormir");
+    const s = await llamar(A, "predecir_proximo_sueno", {});
+    expect(s.error, s.texto).toBe(false);
+    const c = await llamar(C, "plan_del_dia", {});
+    expect(c.datos.codigo).toBe("PERMISO");
+    await llamar(A, "eliminar_evento", { event_id: ev.event_id });
+  });
+
+  it("horario fijo por configuración y vuelta a automático", async () => {
+    const c = await llamar(A, "cambiar_configuracion", { horario_fijo: { despertar: "6:30", siestas: [{ inicio: "12:30", duracion_min: 90 }], dormir: "19:30" } });
+    expect(c.error, c.texto).toBe(false);
+    const p = await llamar(A, "plan_del_dia", {});
+    expect(p.datos.fuente_siestas).toBe("horario");
+    const v = await llamar(A, "cambiar_configuracion", { plan_modo: "auto" });
+    expect(v.error, v.texto).toBe(false);
   });
 
   it("configuración: devuelve anterior y nuevo, y se revierte", async () => {
