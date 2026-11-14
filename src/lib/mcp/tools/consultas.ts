@@ -33,7 +33,7 @@ export function planOut(ctx: Ctx, nombre: string, p: PlanDia) {
   const texto = [
     `Plan de hoy para ${nombre} (estimación, confianza ${p.confianza}):`,
     ...lineas,
-    cr ? `Siguiente: ${cr.titulo}${cr.detalle ? `, ${cr.detalle}` : ""}.` : null,
+    cr ? `Siguiente: ${cr.titulo}${cr.detalle ? `, ${cr.detalle}` : ""}`.replace(/\.?$/, ".") : null,
     p.fuenteSiestas === "edad" ? `${p.referencia.texto}.` : p.fuenteSiestas === "horario" ? "Sigue el horario fijo que configuró el hogar." : `En sus últimos días hizo ${p.siestas} siesta${p.siestas === 1 ? "" : "s"}.`,
     ...p.avisos,
     p.nota,
@@ -290,7 +290,7 @@ export function registrarHerramientasConsulta(server: McpServer, conCtx: ConCtx)
     if (out.estado !== "ok" || !("siguiente" in out)) return ok(out.texto, out);
     const s = out.siguiente;
     const txt = s
-      ? `${out.cuenta_regresiva?.titulo ?? s.nombre}${out.cuenta_regresiva?.detalle ? `, ${out.cuenta_regresiva.detalle}` : ""}. ${s.nombre}: ${s.hora_texto}${s.duracion_min ? `, ≈ ${fDuracion(s.duracion_min)}` : ""} (confianza ${out.confianza}). ${s.por_que}${out.avisos.length ? ` ${out.avisos.join(" ")}` : ""}\n${out.nota}`
+      ? `${`${out.cuenta_regresiva?.titulo ?? s.nombre}${out.cuenta_regresiva?.detalle ? `, ${out.cuenta_regresiva.detalle}` : ""}`.replace(/\.?$/, ".")} ${s.nombre}: ${s.hora_texto}${s.duracion_min ? `, ≈ ${fDuracion(s.duracion_min)}` : ""} (confianza ${out.confianza}). ${s.por_que}${out.avisos.length ? ` ${out.avisos.join(" ")}` : ""}\n${out.nota}`
       : `El plan de hoy ya está completo.\n${out.nota}`;
     return ok(txt, { siguiente: s, cuenta_regresiva: out.cuenta_regresiva, confianza: out.confianza, avisos: out.avisos, nota: out.nota });
   }));
