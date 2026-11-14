@@ -29,7 +29,8 @@ export function Barra({ activa, rol, bebe, yo }: { activa: string; rol: "admin" 
     else router.push(`/?registrar=${tipo}`);
   };
   const opciones = [
-    { k: "sueno", l: "Sueño", cat: "sleep" as const }, { k: "toma", l: "Toma", cat: "feed" as const }, { k: "panal", l: "Pañal", cat: "diaper" as const },
+    { k: "desperto", l: "Despertó", cat: "sleep" as const, icon: "sunrise" as const }, { k: "sueno", l: "Siesta", cat: "sleep" as const, icon: "nap" as const }, { k: "dormir", l: "Hora de dormir", cat: "sleep" as const, icon: "moon" as const },
+    { k: "nocturno", l: "Despertar nocturno", cat: "sleep" as const, icon: "burst" as const }, { k: "toma", l: "Toma", cat: "feed" as const }, { k: "panal", l: "Pañal", cat: "diaper" as const },
     ...(rol === "limitado" ? [] : [{ k: "medicamento", l: "Medicamento", cat: "meds" as const }, { k: "temperatura", l: "Temperatura o síntoma", cat: "doctor" as const }, { k: "nota", l: "Nota", cat: "growth" as const }]),
   ];
   return (
@@ -56,7 +57,7 @@ export function Barra({ activa, rol, bebe, yo }: { activa: string; rol: "admin" 
             <div className="tz-sheet-head"><h2 className="text-title-lg">Registrar</h2><button className="tz-iconbtn plain" type="button" aria-label="Cerrar" onClick={() => setMenu(false)}>×</button></div>
             <div className="tz-grid2">
               {opciones.map((o) => (
-                <button key={o.k} type="button" className="tz-big" style={{ minHeight: 88 }} onClick={() => elegir(o.k)}><CategoryIcon category={o.cat} /><span>{o.l}</span></button>
+                <button key={o.k} type="button" className="tz-big" style={{ minHeight: 88 }} onClick={() => elegir(o.k)}>{"icon" in o && o.icon ? <span className="tz-caticon tz-cat-sleep tz-caticon-md" aria-hidden><Icon name={o.icon} size={22} /></span> : <CategoryIcon category={o.cat} />}<span>{o.l}</span></button>
               ))}
             </div>
           </section>

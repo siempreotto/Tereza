@@ -26,6 +26,7 @@ export function registrarHerramientasConfig(server: McpServer, conCtx: ConCtx, a
       ventana_sueno_nocturno: { desde: a.nocheDesde, hasta: a.nocheHasta },
       ventanas_vigilia: { modo: a.ventanasModo, propias_min: a.ventanasPropias },
       hora_dormir: a.horaDormir,
+      plan_del_dia: { modo: a.planModo ?? "auto", horario_fijo: a.planFijo ?? null },
       alarmas_activas: a.alarmasActivas,
       cuidadores: (miembros ?? []).map((m) => ({ nombre: m.nombre_visible, rol: m.rol })),
     };
@@ -33,6 +34,7 @@ export function registrarHerramientasConfig(server: McpServer, conCtx: ConCtx, a
       `Hogar: ${cfg.hogar} (tu rol: ${ROL_TXT[ctx.rol]}).`,
       `Unidades: volumen en ${a.unidadVolumen}, peso en ${a.unidadPeso}, longitud en ${a.unidadLongitud}. Zona horaria: ${a.tz}.`,
       `Modo noche: ${a.nocheUiModo === "auto" ? `automático de ${a.nocheUiDesde} a ${a.nocheUiHasta}` : a.nocheUiModo === "on" ? "siempre" : "nunca"}. Sueño nocturno: los que empiezan entre ${a.nocheDesde} y ${a.nocheHasta}. Hora de dormir: ${a.horaDormir}.`,
+      `Plan del día: ${a.planModo === "fijo" && a.planFijo ? `horario fijo (despierta ${a.planFijo.despertar}, ${a.planFijo.siestas.length} siesta${a.planFijo.siestas.length === 1 ? "" : "s"}${a.planFijo.siestas.length ? `: ${a.planFijo.siestas.map((x) => `${x.inicio} por ${x.duracion_min} min`).join(", ")}` : ""}, se duerme ${a.planFijo.dormir})` : "automático (aprende de sus registros; mientras tanto, referencia por edad)"}.`,
       `Alarmas: ${a.alarmasActivas ? "activas (umbrales pendientes de validar con un pediatra)" : "apagadas"}.`,
       `Cuidadores: ${cfg.cuidadores.map((c) => `${c.nombre} (${c.rol})`).join(", ")}.`,
     ].join("\n"), cfg);
@@ -52,9 +54,14 @@ export function registrarHerramientasConfig(server: McpServer, conCtx: ConCtx, a
       hora_dormir: HHMM.optional(),
       ventanas_propias_min: z.array(z.number().int().min(30).max(360)).min(1).max(6).nullable().optional().describe("Ventanas de vigilia propias en minutos; null vuelve a la referencia por edad"),
       alarmas_activas: z.boolean().optional(),
+      plan_modo: z.enum(["auto", "fijo"]).optional().describe("auto = aprende de los registros (y usa la referencia por edad mientras tanto); fijo = usa horario_fijo"),
+      horario_fijo: z.object({
+        despertar: HHMM, dormir: HHMM,
+        siestas: z.array(z.object({ inicio: HHMM, duracion_min: z.number().int().min(10).max(240) })).max(4),
+      }).optional().describe("Horario fijo: hora de despertar, siestas (inicio y duración) y hora de dormir, en 24 h"),
       rol: z.object({ miembro: z.string().describe("Nombre del cuidador"), rol: z.enum(["admin", "cuidador", "limitado"]) }).optional(),
     }),
-  }, conCtx("cambiar_configuracion", async (ctx, a: Record<string, unknown> & { rol?: { miembro: string; rol: "admin" | "cuidador" | "limitado" }; ventanas_propias_min?: number[] | null }) => {
+  }, conCtx("cambiar_configuracion", async (ctx, a: Record<string, unknown> & { horario_fijo?: unknown; rol?: { miembro: string; rol: "admin" | "cuidador" | "limitado" }; ventanas_propias_min?: number[] | null }) => {
     soloAdmin(ctx, "cambiar la configuración del hogar");
     const { data: s } = await ctx.db.from("household_settings").select("*").eq("household_id", ctx.hogarId).single();
     if (!s) throw new ErrorMcp("ERROR", "No pudimos leer los ajustes.");
@@ -62,6 +69,7 @@ export function registrarHerramientasConfig(server: McpServer, conCtx: ConCtx, a
       unidad_volumen: "unidad_volumen", unidad_peso: "unidad_peso", unidad_longitud: "unidad_longitud", zona_horaria: "zona_horaria",
       modo_noche: "noche_ui_modo", modo_noche_desde: "noche_ui_desde", modo_noche_hasta: "noche_ui_hasta",
       sueno_noche_desde: "sueno_noche_desde", sueno_noche_hasta: "sueno_noche_hasta", hora_dormir: "hora_dormir", alarmas_activas: "alarmas_activas",
+      plan_modo: "plan_modo",
     };
     const cambios: { campo: string; anterior: unknown; nuevo: unknown }[] = [];
     const upd: Record<string, unknown> = {};
@@ -75,6 +83,15 @@ export function registrarHerramientasConfig(server: McpServer, conCtx: ConCtx, a
       upd[col] = a[k];
       cambios.push({ campo: k, anterior, nuevo: a[k] });
     }
+    if (a.horario_fijo !== undefined) {
+      const f = a.horario_fijo as { despertar: string; dormir: string; siestas: { inicio: string; duracion_min: number }[] };
+      const pad = (t: string) => t.padStart(5, "0");
+      const limpio = { despertar: pad(f.despertar), dormir: pad(f.dormir), siestas: f.siestas.map((x) => ({ inicio: pad(x.inicio), duracion_min: x.duracion_min })) };
+      upd.plan_fijo = limpio;
+      if (a.plan_modo === undefined && s.plan_modo !== "fijo") { upd.plan_modo = "fijo"; cambios.push({ campo: "plan_modo", anterior: s.plan_modo, nuevo: "fijo" }); }
+      cambios.push({ campo: "horario_fijo", anterior: s.plan_fijo, nuevo: limpio });
+    }
+    if ((a.plan_modo === "fijo" || upd.plan_modo === "fijo") && !upd.plan_fijo && !s.plan_fijo) throw new ErrorMcp("VALIDACION", "Para usar horario fijo, dime también el horario: hora de despertar, siestas (inicio y duración) y hora de dormir.");
     if (a.ventanas_propias_min !== undefined) {
       upd.ventanas_propias = a.ventanas_propias_min;
       upd.ventanas_modo = a.ventanas_propias_min ? "propias" : "auto";

@@ -5,7 +5,7 @@ import type { RegistrarInput } from "@/lib/acciones/eventos";
 
 export type OpCola =
   | { id: string; kind: "registrar"; userId: string; creadaEn: number; input: RegistrarInput }
-  | { id: string; kind: "terminar"; userId: string; creadaEn: number; input: { babyId: string; tipo: "sueno" | "toma_pecho" | "extraccion"; fin: string } };
+  | { id: string; kind: "terminar"; userId: string; creadaEn: number; input: { babyId: string; tipo: "sueno" | "toma_pecho" | "extraccion"; fin: string; payload?: Record<string, unknown>; notas?: string | null } };
 
 const CLAVE = "tereza:cola";
 const EVENTO = "tereza:cola-cambio";

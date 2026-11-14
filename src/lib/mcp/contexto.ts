@@ -1,4 +1,5 @@
 import "server-only";
+import type { PlanFijo } from "@/lib/core/sueno";
 import { createClient } from "@supabase/supabase-js";
 import type { AuthInfo } from "@modelcontextprotocol/server";
 import type { Database } from "@/lib/db/types";
@@ -51,7 +52,7 @@ export async function crearContexto(auth: AuthInfo | undefined): Promise<Ctx> {
     db, userId, clientId: auth.clientId, rol: m.rol, nombre: m.nombre_visible, hogarId: m.household_id, hogarNombre: m.households?.nombre ?? "",
     ajustes: {
       tz: s.zona_horaria, nocheDesde: hhmm(s.sueno_noche_desde), nocheHasta: hhmm(s.sueno_noche_hasta), horaDormir: hhmm(s.hora_dormir),
-      ventanasModo: s.ventanas_modo as "auto" | "propias", ventanasPropias: s.ventanas_propias,
+      ventanasModo: s.ventanas_modo as "auto" | "propias", ventanasPropias: s.ventanas_propias, planModo: s.plan_modo as "auto" | "fijo", planFijo: (s.plan_fijo as PlanFijo | null) ?? null,
       unidadVolumen: s.unidad_volumen as UnidadVolumen, unidadPeso: s.unidad_peso as UnidadPeso, unidadLongitud: s.unidad_longitud as UnidadLongitud,
       nocheUiModo: s.noche_ui_modo as "auto" | "on" | "off", nocheUiDesde: hhmm(s.noche_ui_desde), nocheUiHasta: hhmm(s.noche_ui_hasta), alarmasActivas: s.alarmas_activas,
     },

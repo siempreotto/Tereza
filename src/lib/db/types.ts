@@ -201,6 +201,8 @@ export type Database = {
           noche_ui_hasta: string
           noche_ui_modo: string
           notificaciones: Json
+          plan_fijo: Json | null
+          plan_modo: string
           sueno_noche_desde: string
           sueno_noche_hasta: string
           unidad_longitud: string
@@ -219,6 +221,8 @@ export type Database = {
           noche_ui_hasta?: string
           noche_ui_modo?: string
           notificaciones?: Json
+          plan_fijo?: Json | null
+          plan_modo?: string
           sueno_noche_desde?: string
           sueno_noche_hasta?: string
           unidad_longitud?: string
@@ -237,6 +241,8 @@ export type Database = {
           noche_ui_hasta?: string
           noche_ui_modo?: string
           notificaciones?: Json
+          plan_fijo?: Json | null
+          plan_modo?: string
           sueno_noche_desde?: string
           sueno_noche_hasta?: string
           unidad_longitud?: string

@@ -6,7 +6,8 @@ import { Button, Icon, LogCard, QuickActions, TimerRing, type Category } from "@
 import { useAviso } from "./Aviso";
 import { useTema } from "./Tema";
 import { Hojas, type HojaAbierta } from "./Hojas";
-import { Prediccion } from "./Prediccion";
+import { PlanDia } from "./PlanDia";
+import { planDelDia } from "@/lib/core/planDia";
 import { cambiarLado, corregirEvento, eliminarEvento, registrarEvento, restaurarEvento, terminarTimer } from "@/lib/acciones/eventos";
 import { COMO, LUGAR, describir, ms, segundosPecho, textoGuardado, TIPOS_TOMA, type Evento, type Payload } from "@/lib/core/eventos";
 import { alarmaPocosPanales } from "@/lib/core/alarmas";
@@ -48,7 +49,7 @@ export function Hoy(p: Props) {
   useEffect(() => {
     const h = (e: Event) => {
       const tipo = (e as CustomEvent<string>).detail;
-      const mapa: Record<string, HojaAbierta> = { sueno: { tipo: "sueno" }, toma: { tipo: "toma" }, panal: { tipo: "panal" }, medicamento: { tipo: "medicamento" }, temperatura: { tipo: "temperatura" }, nota: { tipo: "nota" } };
+      const mapa: Record<string, HojaAbierta> = { sueno: { tipo: "sueno" }, desperto: { tipo: "desperto" }, dormir: { tipo: "dormir" }, nocturno: { tipo: "nocturno" }, toma: { tipo: "toma" }, panal: { tipo: "panal" }, medicamento: { tipo: "medicamento" }, temperatura: { tipo: "temperatura" }, nota: { tipo: "nota" } };
       if (mapa[tipo]) setHoja(mapa[tipo]);
     };
     window.addEventListener("tereza:registrar", h);
@@ -79,6 +80,12 @@ export function Hoy(p: Props) {
   const ultimoPanal = vivos.filter((e) => e.tipo === "panal").sort(porInicioDesc)[0];
   const sd = suenoDelDia(vivos, hoy, ahora, a);
   const deHoy = vivos.filter((e) => ms(e.started_at) >= hoy || (!e.ended_at && (e.tipo === "sueno" || e.tipo === "toma_pecho"))).sort(porInicioDesc);
+  const minuto = Math.floor(ahora / 60_000);
+  const plan = useMemo(() => planDelDia(vivos, { fechaNacimiento: bebe.fecha_nacimiento, semanasGestacion: bebe.semanas_gestacion, nombre: bebe.nombre }, ahora, a),
+    // El plan se recalcula cada minuto o cuando cambian los registros.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [eventos, pendientes, cierres, bebe, a, minuto]);
+  const sinDespertarHoy = plan.estado === "ok" && plan.bloques[0].estado !== "hecho" && !suenoAhora;
   const alarmaPanales = a.alarmasActivas && !limitado ? alarmaPocosPanales(vivos, hoy, ahora, tz) : null;
 
   // Reenvía la cola al abrir y cada vez que vuelve la red; en orden, para que un cierre vaya después de su inicio.
@@ -149,31 +156,36 @@ export function Hoy(p: Props) {
 
   const iniciarSueno = () => registrar({ babyId: bebe.id, tipo: "sueno", startedAt: new Date(ahora).toISOString(), endedAt: null, payload: { lugar: "cuna", como_se_durmio: "solo" } }, `Empezó el sueño a las ${fHora(ahora, tz)}`);
 
-  const desperto = async () => {
-    if (!suenoAhora) return;
-    const fin = new Date(ahora).toISOString();
+  /** Cierra el sueño en curso (despertar de la mañana, de una siesta o despertar nocturno). */
+  const terminarSueno = async (o: { fin?: number; payload?: Record<string, unknown>; notas?: string | null; deshacer?: boolean } = {}): Promise<Evento | null> => {
+    if (!suenoAhora) return null;
+    const fin = new Date(o.fin ?? ahora).toISOString();
     const antes = suenoAhora;
     aplicar((l) => l.map((x) => (x.id === antes.id ? { ...x, ended_at: fin } : x)));
     let r: Awaited<ReturnType<typeof terminarTimer>>;
     try {
       if (typeof navigator !== "undefined" && navigator.onLine === false) throw new Error("offline");
-      r = await terminarTimer({ babyId: bebe.id, tipo: "sueno", fin });
+      r = await terminarTimer({ babyId: bebe.id, tipo: "sueno", fin, payload: o.payload, notas: o.notas });
     } catch (e) {
-      if (!esErrorDeRed(e)) { avisar("No pudimos guardar. Vuelve a intentarlo."); return; }
-      encolar({ id: nuevoId(), kind: "terminar", userId: p.yo.id, creadaEn: Date.now(), input: { babyId: bebe.id, tipo: "sueno", fin } });
+      if (!esErrorDeRed(e)) { avisar("No pudimos guardar. Vuelve a intentarlo."); return null; }
+      encolar({ id: nuevoId(), kind: "terminar", userId: p.yo.id, creadaEn: Date.now(), input: { babyId: bebe.id, tipo: "sueno", fin, payload: o.payload, notas: o.notas } });
       avisar(`Sin conexión: guardé que despertó a las ${fHora(ms(fin), tz)} en este teléfono. Lo envío cuando vuelva la red.`);
-      return;
+      return null;
     }
-    if (!r.ok) { avisar(r.error); refrescar(); return; }
+    if (!r.ok) { avisar(r.error); refrescar(); return null; }
     const ev = r.data.evento;
     aplicar((l) => l.map((x) => (x.id === ev.id ? ev : x)));
-    avisar(`Despertó. Durmió ${fDuracion(r.data.duracionMin)}`, async () => {
-      const u = await corregirEvento({ eventId: ev.id, expectedVersion: ev.version, endedAt: null });
-      if (!u.ok) avisar(u.error); else aplicar((l) => l.map((x) => (x.id === ev.id ? u.data.evento : x)));
-      refrescar();
-    });
+    if (o.deshacer !== false) {
+      avisar(`Despertó a las ${fHora(ms(fin), tz)}. Durmió ${fDuracion(r.data.duracionMin)}`, async () => {
+        const u = await corregirEvento({ eventId: ev.id, expectedVersion: ev.version, endedAt: null });
+        if (!u.ok) avisar(u.error); else aplicar((l) => l.map((x) => (x.id === ev.id ? u.data.evento : x)));
+        refrescar();
+      });
+    }
     refrescar();
+    return ev;
   };
+  const desperto = () => setHoja({ tipo: "desperto" });
 
   const lado = async (l: "izq" | "der" | null | undefined) => {
     const r = await cambiarLado({ babyId: bebe.id, lado: l });
@@ -258,7 +270,8 @@ export function Hoy(p: Props) {
     );
     dock = (
       <div className="tz-dock">
-        <Button variant="primary" size="lg" icon="sun" block onClick={desperto}>Despertó</Button>
+        <Button variant="primary" size="lg" icon="sunrise" block onClick={desperto}>Despertó</Button>
+        {opts.esNoche(ms(suenoAhora.started_at)) ? <Button variant="glass" icon="burst" block onClick={() => setHoja({ tipo: "nocturno" })}>Despertar nocturno</Button> : null}
         {limitado ? null : <Button variant="glass" block onClick={() => setHoja({ tipo: "detalle", evento: suenoAhora })}>Cambiar inicio o detalles</Button>}
       </div>
     );
@@ -270,6 +283,7 @@ export function Hoy(p: Props) {
         <div className="tz-hero-state">
           <span className="tz-kicker text-label c-sleep"><Icon name="sun" size={16} />Despierta</span>
           <p className="text-display tz-num">{ultimoSueno?.ended_at ? fHace(ms(ultimoSueno.ended_at), ahora) : "sin sueño registrado"}</p>
+          {sinDespertarHoy ? <Button variant="glass" icon="sunrise" onClick={() => setHoja({ tipo: "desperto" })}>¿A qué hora despertó hoy?</Button> : null}
           {ultimoSueno?.ended_at ? <p className="text-body tz-muted">Se despertó a las {fHora(ms(ultimoSueno.ended_at), tz)} de {opts.esNoche(ms(ultimoSueno.started_at)) ? "la noche" : `una siesta de ${fDuracion((ms(ultimoSueno.ended_at) - ms(ultimoSueno.started_at)) / MIN)}`}.</p> : null}
         </div>
         <div className="tz-hero-facts three">
@@ -283,6 +297,7 @@ export function Hoy(p: Props) {
         <span className="tz-kicker text-label tz-muted">Primer día con Tereza</span>
         <p className="text-title-lg">¿Qué está haciendo {bebe.nombre} ahora?</p>
         <p className="text-body tz-muted">Empieza por ahí. Un toque guarda la hora; los detalles pueden esperar.</p>
+        <Button variant="primary" icon="sunrise" block onClick={() => setHoja({ tipo: "desperto" })}>¿A qué hora despertó hoy?</Button>
       </section>
     );
     dock = <div className="tz-dock"><QuickActions categories={["sleep", "feed", "diaper"]} labels={{ sleep: "Iniciar sueño", feed: "Toma", diaper: "Pañal" }} onSelect={rapido} /></div>;
@@ -305,7 +320,7 @@ export function Hoy(p: Props) {
       <div className="tz-cols">
         <div className="tz-stack s16">
           {hero}
-          {!pechoAhora && !suenoAhora && vivos.length && !limitado ? <Prediccion eventos={vivos} bebe={{ fechaNacimiento: bebe.fecha_nacimiento, semanasGestacion: bebe.semanas_gestacion, nombre: bebe.nombre }} ajustes={a} ahora={ahora} /> : null}
+          {!pechoAhora && !limitado ? <PlanDia plan={plan} ahora={ahora} tz={tz} nombre={bebe.nombre} /> : null}
           {alarmaPanales ? (
             <div className="tz-alert" role="note">
               <div className="tz-stack s4"><p className="text-body-strong tz-alert-title">{alarmaPanales.titulo}</p><p className="text-body-sm">{alarmaPanales.texto}</p></div>
@@ -342,7 +357,7 @@ export function Hoy(p: Props) {
           )}
         </section>
       </div>
-      <Hojas hoja={hoja} cerrar={() => setHoja(null)} registrar={registrar} eliminar={eliminar} ajustes={a} ahora={ahora} eventos={vivos} bebe={bebe} tratamientos={p.tratamientos} limitado={limitado} nombres={p.nombres} alCorregir={(ev) => { aplicar((l) => l.map((x) => (x.id === ev.id ? ev : x))); refrescar(); }} />
+      <Hojas hoja={hoja} cerrar={() => setHoja(null)} registrar={registrar} terminarSueno={terminarSueno} suenoAhora={suenoAhora ?? null} eliminar={eliminar} ajustes={a} ahora={ahora} eventos={vivos} bebe={bebe} tratamientos={p.tratamientos} limitado={limitado} nombres={p.nombres} alCorregir={(ev) => { aplicar((l) => l.map((x) => (x.id === ev.id ? ev : x))); refrescar(); }} />
     </main>
   );
 }

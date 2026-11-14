@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 import { entrarComoPrueba, hayCredencialesE2E } from "./sesion";
 
 // WCAG 2.1 AA en modo Día y Noche en las pantallas principales.
-const RUTAS = ["/", "/diario", "/salud-bebe", "/salud-bebe/crecimiento", "/salud-bebe/medicamentos", "/salud-bebe/pediatra", "/salud-bebe/dudas", "/mas", "/mas/patrones", "/mas/resumen", "/mas/claude", "/mas/datos"];
+const RUTAS = ["/", "/diario", "/salud-bebe", "/salud-bebe/crecimiento", "/salud-bebe/medicamentos", "/salud-bebe/pediatra", "/salud-bebe/dudas", "/mas", "/mas/patrones", "/mas/resumen", "/mas/claude", "/mas/datos", "/mas/ajustes"];
 
 test("entrar cumple AA", async ({ page }) => {
   await page.goto("/entrar");
