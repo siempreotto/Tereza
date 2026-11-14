@@ -130,7 +130,7 @@ export type Database = {
           ended_at: string | null
           household_id: string
           id: string
-          logged_by: string
+          logged_by: string | null
           notas: string | null
           payload: Json
           source: Database["public"]["Enums"]["origen_registro"]
@@ -148,7 +148,7 @@ export type Database = {
           ended_at?: string | null
           household_id: string
           id?: string
-          logged_by?: string
+          logged_by?: string | null
           notas?: string | null
           payload?: Json
           source?: Database["public"]["Enums"]["origen_registro"]
@@ -166,7 +166,7 @@ export type Database = {
           ended_at?: string | null
           household_id?: string
           id?: string
-          logged_by?: string
+          logged_by?: string | null
           notas?: string | null
           payload?: Json
           source?: Database["public"]["Enums"]["origen_registro"]
@@ -374,7 +374,7 @@ export type Database = {
           creado_en: string
           household_id: string
           id: string
-          logged_by: string
+          logged_by: string | null
           longitud_mm: number | null
           medido_en: string
           notas: string | null
@@ -388,7 +388,7 @@ export type Database = {
           creado_en?: string
           household_id: string
           id?: string
-          logged_by?: string
+          logged_by?: string | null
           longitud_mm?: number | null
           medido_en: string
           notas?: string | null
@@ -402,7 +402,7 @@ export type Database = {
           creado_en?: string
           household_id?: string
           id?: string
-          logged_by?: string
+          logged_by?: string | null
           longitud_mm?: number | null
           medido_en?: string
           notas?: string | null
@@ -563,7 +563,7 @@ export type Database = {
         Row: {
           baby_id: string
           creada_en: string
-          creada_por: string
+          creada_por: string | null
           household_id: string
           id: string
           resuelta_en_visita_id: string | null
@@ -573,7 +573,7 @@ export type Database = {
         Insert: {
           baby_id: string
           creada_en?: string
-          creada_por?: string
+          creada_por?: string | null
           household_id: string
           id?: string
           resuelta_en_visita_id?: string | null
@@ -583,7 +583,7 @@ export type Database = {
         Update: {
           baby_id?: string
           creada_en?: string
-          creada_por?: string
+          creada_por?: string | null
           household_id?: string
           id?: string
           resuelta_en_visita_id?: string | null
@@ -677,6 +677,7 @@ export type Database = {
         Args: { p_nombre_visible: string; p_token: string }
         Returns: string
       }
+      borrar_hogares_propios: { Args: never; Returns: number }
       comparar_periodos: {
         Args: {
           p_a_desde: string
@@ -722,6 +723,16 @@ export type Database = {
       estadisticas_periodo: {
         Args: { p_baby: string; p_desde: string; p_hasta: string }
         Returns: Json
+      }
+      mi_situacion_para_eliminar: {
+        Args: never
+        Returns: {
+          admins: number
+          household_id: string
+          miembros: number
+          nombre: string
+          rol: Database["public"]["Enums"]["rol_miembro"]
+        }[]
       }
       payload_valido: {
         Args: {

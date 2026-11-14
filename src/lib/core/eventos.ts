@@ -72,7 +72,7 @@ export type Evento = {
   ended_at: string | null;
   payload: unknown;
   notas: string | null;
-  logged_by: string;
+  logged_by: string | null;
   source: "web" | "mcp";
   version: number;
   eliminado_en?: string | null;

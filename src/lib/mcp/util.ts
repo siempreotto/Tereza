@@ -46,7 +46,7 @@ export function eventoOut(ctx: Ctx, e: Evento, nombres: Record<string, string> =
   const d = describir(e, opcionesDescripcion(ctx, nombresMed));
   return {
     event_id: e.id, tipo: e.tipo, started_at: e.started_at, ended_at: e.ended_at, payload: e.payload, notas: e.notas,
-    logged_by_nombre: nombres[e.logged_by] ?? null, source: e.source, version: e.version,
+    logged_by_nombre: nombres[e.logged_by ?? ""] ?? null, source: e.source, version: e.version,
     resumen_texto: `${d.titulo}: ${d.detalle}`, en_curso: d.enCurso,
   };
 }

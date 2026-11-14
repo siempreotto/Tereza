@@ -1,9 +1,14 @@
 # Estado de Tereza
 
-**Hito actual:** 5. Salud (código listo)
-**Rama:** `claude/hito-5-salud` (incluye los hitos anteriores)
-**Último preview:** https://tereza-git-claude-hito-5-salud-sento-product.vercel.app
-**Configuración pendiente:** ver `CONFIGURACION.md` (pide entrar con tu cuenta de Vercel del equipo Sento Product)
+**Hito actual:** 7 de 7 terminados en código. En producción: https://tereza-kappa.vercel.app
+**Rama:** `main` (cada hito tiene su rama `claude/hito-N-…`)
+**Configuración pendiente:** ver «Pendientes manuales tuyos» abajo y `CONFIGURACION.md`
+
+## Cómo conectar Claude (cuando el OAuth de Supabase esté guardado)
+1. En Claude: Ajustes › Conectores › Agregar conector personalizado › URL `https://tereza-kappa.vercel.app/api/mcp`.
+2. Entra con tu cuenta de Tereza y toca «Permitir».
+3. Prueba: «Lucía se durmió a las 2», «¿cuándo fue la última toma?», «dale 4 oz de fórmula hace 20 minutos», «¿cómo durmió esta semana comparada con la anterior?», «anota para el pediatra que tose de noche».
+4. En Claude Code: `claude mcp add --transport http tereza https://tereza-kappa.vercel.app/api/mcp`.
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».
@@ -78,14 +83,21 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Pruebas de integración contra la base real (`pnpm test:integracion`): 8/8, incluidos permisos del rol limitado y conflicto de versión
 - [ ] Conector agregado en Claude y probado con las 5 frases (falta «Save changes» en Supabase › Authentication › OAuth Server)
 
+## Hito 7: robustez
+- [x] Cola sin red: crear registros y «Despertó» se guardan en el teléfono con `client_op_id`, se ven en Hoy con «N por enviar» y se reenvían solos al volver la red (sin duplicar; solo los envía la misma persona que los guardó)
+- [x] Service worker: la app abre sin red con la última copia de Hoy; la copia se borra al cerrar sesión
+- [x] Conflictos: hoja de conflicto con ambas versiones (desde el Hito 3) y CONFLICTO en el MCP
+- [x] Accesibilidad WCAG 2.1 AA con axe en 12 pantallas, modo Día y Noche: 0 violaciones
+- [x] Más › Tus datos: exportar CSV (abre en Excel/Sheets) y JSON completo; eliminar cuenta con confirmación (borrado real: si eres el único miembro se borran hogar, bebés, registros, salud y adjuntos; si compartes el hogar tus registros quedan para la familia; el último admin de un hogar compartido primero debe nombrar a otro)
+- [x] Playwright: flujos de los capítulos del recorrido (primeros minutos, primer día con temporizadores y deshacer, modo noche, Diario y salud, sin red); «Diego desde Claude» cubierto por las pruebas de integración del MCP
+- [x] Todo en verde antes de publicar: lint, typecheck, 52 unitarias, 8 de integración MCP, e2e en móvil y escritorio
+
 ## Pendientes manuales tuyos
-- **Para probar el acceso en el preview (5 minutos, en Supabase):**
-  1. Authentication › URL Configuration: Site URL = `https://tereza-kappa.vercel.app`; en Redirect URLs agrega `https://tereza-*-sento-product.vercel.app/**` y `http://localhost:3000/**`.
-  2. Authentication › Emails: en «Magic Link» y en «Confirm signup» pega `supabase/templates/codigo.html` (asunto: «Tu código para entrar a Tereza»). Así el correo trae el código de 6 dígitos.
-- Más adelante: copiar la llave secreta de Supabase (Project Settings › API Keys › Secret keys) a Vercel como `SUPABASE_SECRET_KEY`, tipo «Sensitive», solo Production y Preview.
-- Más adelante: cliente OAuth de Google para «Continuar con Google».
-- Usuario de pruebas e2e `e2e@ejemplo.tereza.test` (contraseña en `.env.local`, fuera de git): borrarlo junto con el ejemplo antes de datos reales.
-- Red del entorno de Claude: agregar `jkqwlczjqoqmxhatqfad.supabase.co` y `*.vercel.app` a Allowed domains para que corran los e2e con sesión.
+- **Supabase › Authentication › OAuth Server: presiona «Save changes».** Los interruptores se ven encendidos, pero el servidor sigue respondiendo «OAuth server is disabled». Sin esto Claude no puede conectarse.
+- Supabase › Authentication › Providers › Google: confirma que presionaste «Save» (Google ya está activado en la pantalla de entrar).
+- Supabase › Authentication › Emails: si no lo hiciste, pega `supabase/templates/codigo.html` en «Magic Link» y «Confirm signup» para que el correo traiga el código de 6 dígitos.
+- JWT Keys: ya está bien (llave ECC P-256 vigente). No hay que hacer nada más ahí.
+- Datos de ejemplo: el hogar «Casa de Lucía» y los usuarios `@ejemplo.tereza.test` siguen en la base para las pruebas. Están aislados por RLS (nadie más los ve). Cuando quieras quitarlos, corre el bloque final de `supabase/seed/ejemplo.sql` (no lo hice yo porque borra datos).
 - Antes de datos reales: borrar el ejemplo (instrucciones al final de `supabase/seed/ejemplo.sql`) y transferir el proyecto de Vercel a una cuenta personal.
 
 ## Riesgos abiertos

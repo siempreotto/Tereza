@@ -83,3 +83,22 @@ test("Diario, patrones, resumen y salud cargan con datos", async ({ page }) => {
   await page.goto("/salud-bebe/resumen");
   await expect(page.getByRole("heading", { name: "Resumen para el pediatra" })).toBeVisible();
 });
+
+test("sin red: el pañal queda «por enviar» y se envía al volver la conexión", async ({ page, context }) => {
+  await context.setOffline(true);
+  await page.getByRole("button", { name: "Pañal", exact: true }).click();
+  await page.getByRole("button", { name: "Mojado", exact: true }).click();
+  await expect(page.getByText(/Sin conexión/).first()).toBeVisible();
+  await expect(page.getByText("1 por enviar")).toBeVisible();
+  await context.setOffline(false);
+  await page.evaluate(() => window.dispatchEvent(new Event("online")));
+  await expect(page.getByText(/Envié el registro que quedó sin red/)).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByText("1 por enviar")).toHaveCount(0);
+  // Limpieza: elimina el pañal que se envió.
+  await page.reload();
+  const fila = page.getByRole("region", { name: "Registros de hoy" }).getByText(/^Mojado$/).first();
+  if (await fila.isVisible()) {
+    await fila.click();
+    await page.getByRole("button", { name: /Eliminar/ }).first().click();
+  }
+});

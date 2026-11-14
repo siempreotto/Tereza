@@ -8,7 +8,7 @@ import { useAviso } from "@/components/hoy/Aviso";
 import { agregarDuda, eliminarDuda, resolverDuda } from "@/lib/acciones/salud";
 import { fFecha } from "@/lib/core/tiempo";
 
-type Duda = { id: string; texto: string; creada_en: string; creada_por: string; source: string; resuelta_en_visita_id: string | null };
+type Duda = { id: string; texto: string; creada_en: string; creada_por: string | null; source: string; resuelta_en_visita_id: string | null };
 
 export function Dudas({ babyId, dudas, visitas, nombres, tz }: { babyId: string; dudas: Duda[]; visitas: { id: string; motivo: string | null; fecha: string }[]; nombres: Record<string, string>; tz: string }) {
   const router = useRouter();
@@ -38,7 +38,7 @@ export function Dudas({ babyId, dudas, visitas, nombres, tz }: { babyId: string;
             <ul className="tz-list tz-glass" style={{ margin: 0, padding: 0, listStyle: "none" }}>
               {pendientes.map((q) => (
                 <li key={q.id} className="tz-row" style={{ alignItems: "flex-start" }}>
-                  <span className="grow"><span className="text-body">{q.texto}</span><span className="text-body-sm tz-muted">{nombres[q.creada_por] ?? "Alguien"}{q.source === "mcp" ? " desde Claude" : ""} · {fFecha(new Date(q.creada_en).getTime(), tz)}</span></span>
+                  <span className="grow"><span className="text-body">{q.texto}</span><span className="text-body-sm tz-muted">{nombres[q.creada_por ?? ""] ?? "Alguien"}{q.source === "mcp" ? " desde Claude" : ""} · {fFecha(new Date(q.creada_en).getTime(), tz)}</span></span>
                   {visitas[0] ? <Button variant="ghost" onClick={() => marcar(q, visitas[0].id)}>Resuelta</Button> : null}
                 </li>
               ))}

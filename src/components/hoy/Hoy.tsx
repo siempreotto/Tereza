@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { Button, Icon, LogCard, QuickActions, TimerRing, type Category } from "@/components/tz";
 import { useAviso } from "./Aviso";
@@ -14,6 +14,7 @@ import { esNoche, suenoDelDia } from "@/lib/core/sueno";
 import { etiquetaDia, fDuracion, fFecha, fHace, fHora, fMinSeg, fReloj, inicioDia, MIN } from "@/lib/core/tiempo";
 import { edadTexto } from "@/lib/core/edad";
 import type { Ajustes } from "@/lib/datos/hoy";
+import { encolar, esErrorDeRed, leerCola, nuevoId, quitar, suscribirCola, type OpCola } from "@/lib/cola";
 
 export type Bebe = { id: string; nombre: string; fecha_nacimiento: string; semanas_gestacion: number | null; sexo: string };
 export type Props = {
@@ -56,10 +57,20 @@ export function Hoy(p: Props) {
 
   const { ajustes: a, bebe } = p;
   const tz = a.tz;
+  // Operaciones guardadas sin red en este dispositivo.
+  const colaTxt = useSyncExternalStore(suscribirCola, () => { try { return localStorage.getItem("tereza:cola") ?? "[]"; } catch { return "[]"; } }, () => "[]");
+  const cola = useMemo(() => (JSON.parse(colaTxt) as OpCola[]).filter((o) => o.input.babyId === bebe.id && o.userId === p.yo.id), [colaTxt, bebe.id, p.yo.id]);
+  const pendientes = useMemo(() => cola.flatMap((o): Evento[] => o.kind !== "registrar" ? [] : [{
+    id: o.id, tipo: o.input.tipo, started_at: o.input.startedAt, ended_at: o.input.endedAt ?? null, payload: (o.input.payload ?? {}) as Evento["payload"],
+    notas: o.input.notas ?? null, logged_by: p.yo.id, source: "web", version: 0, eliminado_en: null,
+  } as Evento]), [cola, p.yo.id]);
+  const cierres = useMemo(() => new Map<string, string>(cola.flatMap((o) => (o.kind === "terminar" ? [[o.input.tipo, o.input.fin] as const] : []))), [cola]);
   const limitado = p.rol === "limitado";
   const opts = useMemo(() => ({ tz, unidadVolumen: a.unidadVolumen, ahora, esNoche: esNoche(a), nombreMedicamento: (id: string) => p.tratamientos.find((t) => t.id === id)?.nombre }), [tz, a, ahora, p.tratamientos]);
   const hoy = inicioDia(ahora, tz);
-  const vivos = eventos.filter((e) => !e.eliminado_en);
+  const vivos = [...pendientes.filter((x) => !eventos.some((e) => e.id === x.id)), ...eventos]
+    .filter((e) => !e.eliminado_en)
+    .map((e) => (!e.ended_at && cierres.has(e.tipo) ? { ...e, ended_at: cierres.get(e.tipo)! } : e));
   const porInicioDesc = (x: Evento, y: Evento) => ms(y.started_at) - ms(x.started_at);
   const suenoAhora = vivos.find((e) => e.tipo === "sueno" && !e.ended_at);
   const pechoAhora = vivos.find((e) => e.tipo === "toma_pecho" && !e.ended_at);
@@ -70,12 +81,55 @@ export function Hoy(p: Props) {
   const deHoy = vivos.filter((e) => ms(e.started_at) >= hoy || (!e.ended_at && (e.tipo === "sueno" || e.tipo === "toma_pecho"))).sort(porInicioDesc);
   const alarmaPanales = a.alarmasActivas && !limitado ? alarmaPocosPanales(vivos, hoy, ahora, tz) : null;
 
+  // Reenvía la cola al abrir y cada vez que vuelve la red; en orden, para que un cierre vaya después de su inicio.
+  const enviando = useRef(false);
+  const yoId = p.yo.id;
+  useEffect(() => {
+    const enviar = async () => {
+      if (enviando.current || navigator.onLine === false) return;
+      // Solo lo que guardó esta misma persona: si otra cuenta entra en este teléfono, no se envía a su nombre.
+      const ops = leerCola().filter((o) => o.userId === yoId);
+      if (!ops.length) return;
+      enviando.current = true;
+      let enviadas = 0;
+      try {
+        for (const op of ops) {
+          try {
+            const r = op.kind === "registrar" ? await registrarEvento(op.input) : await terminarTimer(op.input);
+            quitar(op.id);
+            if (r.ok) enviadas++;
+            else if (!(op.kind === "terminar" && r.error.startsWith("No hay"))) avisar(`Un registro guardado sin red no se pudo enviar: ${r.error}`);
+          } catch (e) {
+            if (esErrorDeRed(e)) break;
+            quitar(op.id);
+          }
+        }
+      } finally {
+        enviando.current = false;
+      }
+      if (enviadas) { avisar(enviadas === 1 ? "Envié el registro que quedó sin red." : `Envié ${enviadas} registros que quedaron sin red.`); router.refresh(); }
+    };
+    void enviar();
+    window.addEventListener("online", enviar);
+    return () => window.removeEventListener("online", enviar);
+  }, [avisar, router, yoId]);
+
   // Optimista: aplica el cambio local, luego confirma con el servidor y refresca.
   const aplicar = useCallback((fn: (l: Evento[]) => Evento[]) => setEventos((l) => fn(l)), []);
   const refrescar = useCallback(() => router.refresh(), [router]);
 
   const registrar = useCallback(async (input: Parameters<typeof registrarEvento>[0], mensaje?: string) => {
-    const r = await registrarEvento({ ...input, babyId: bebe.id });
+    const datos = { ...input, babyId: bebe.id, clientOpId: input.clientOpId ?? nuevoId() };
+    let r: Awaited<ReturnType<typeof registrarEvento>>;
+    try {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) throw new Error("offline");
+      r = await registrarEvento(datos);
+    } catch (e) {
+      if (!esErrorDeRed(e)) { avisar("No pudimos guardar. Vuelve a intentarlo."); return null; }
+      encolar({ id: datos.clientOpId, kind: "registrar", userId: p.yo.id, creadaEn: Date.now(), input: datos });
+      avisar(`Sin conexión: ${(mensaje ?? "lo guardé").replace(/^./, (c) => c.toLowerCase())} en este teléfono. Lo envío cuando vuelva la red.`);
+      return null;
+    }
     if (!r.ok) { avisar(r.error); return null; }
     const ev = r.data.evento;
     if (r.data.yaExistia) {
@@ -91,7 +145,7 @@ export function Hoy(p: Props) {
     });
     refrescar();
     return ev;
-  }, [bebe.id, avisar, aplicar, opts, tz, refrescar]);
+  }, [bebe.id, avisar, aplicar, opts, tz, refrescar, p.yo.id]);
 
   const iniciarSueno = () => registrar({ babyId: bebe.id, tipo: "sueno", startedAt: new Date(ahora).toISOString(), endedAt: null, payload: { lugar: "cuna", como_se_durmio: "solo" } }, `Empezó el sueño a las ${fHora(ahora, tz)}`);
 
@@ -100,7 +154,16 @@ export function Hoy(p: Props) {
     const fin = new Date(ahora).toISOString();
     const antes = suenoAhora;
     aplicar((l) => l.map((x) => (x.id === antes.id ? { ...x, ended_at: fin } : x)));
-    const r = await terminarTimer({ babyId: bebe.id, tipo: "sueno", fin });
+    let r: Awaited<ReturnType<typeof terminarTimer>>;
+    try {
+      if (typeof navigator !== "undefined" && navigator.onLine === false) throw new Error("offline");
+      r = await terminarTimer({ babyId: bebe.id, tipo: "sueno", fin });
+    } catch (e) {
+      if (!esErrorDeRed(e)) { avisar("No pudimos guardar. Vuelve a intentarlo."); return; }
+      encolar({ id: nuevoId(), kind: "terminar", userId: p.yo.id, creadaEn: Date.now(), input: { babyId: bebe.id, tipo: "sueno", fin } });
+      avisar(`Sin conexión: guardé que despertó a las ${fHora(ms(fin), tz)} en este teléfono. Lo envío cuando vuelva la red.`);
+      return;
+    }
     if (!r.ok) { avisar(r.error); refrescar(); return; }
     const ev = r.data.evento;
     aplicar((l) => l.map((x) => (x.id === ev.id ? ev : x)));
@@ -234,6 +297,7 @@ export function Hoy(p: Props) {
           <span className="text-body-sm tz-muted">{edadTexto(bebe.fecha_nacimiento, new Date(ahora), bebe.semanas_gestacion)}</span>
         </span>
         <div className="tz-top-actions">
+          {cola.length ? <span className="tz-tag" role="status">{cola.length} por enviar</span> : null}
           {limitado ? <span className="tz-tag">{p.yo.nombre}</span> : <span className="text-body-sm tz-muted tz-num">{fHora(ahora, tz)}</span>}
           <button className="tz-iconbtn" type="button" aria-label={noche ? "Cambiar a modo día" : "Cambiar a modo noche"} onClick={alternar}><Icon name={noche ? "sun" : "moon"} /></button>
         </div>
@@ -256,7 +320,7 @@ export function Hoy(p: Props) {
             <div className="tz-list tz-glass">
               {deHoy.slice(0, limitado ? 20 : 8).map((e) => {
                 const d = describir(e, opts);
-                const quien = p.nombres[e.logged_by] ?? "";
+                const quien = p.nombres[e.logged_by ?? ""] ?? "";
                 const cat = CAT[d.cat];
                 const ago = d.enCurso ? null : ahora - ms(e.started_at) < 6 * 3_600_000 ? fHace(ms(e.started_at), ahora) : etiquetaDia(ms(e.started_at), ahora, tz);
                 const detalle = d.detalle + (e.source === "mcp" ? ` · ${quien} desde Claude` : "");

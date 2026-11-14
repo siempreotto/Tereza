@@ -11,7 +11,7 @@ import { etiquetaDia, fHora } from "@/lib/core/tiempo";
 import { VIA } from "@/lib/core/eventos";
 
 type Tratamiento = { id: string; nombre: string; indicacion_textual: string; prescrito_por: string | null; inicio: string; fin: string | null; activo: boolean };
-type Adm = { id: string; started_at: string; payload: { medication_id: string; cantidad_textual: string; via?: string }; logged_by: string; source: string };
+type Adm = { id: string; started_at: string; payload: { medication_id: string; cantidad_textual: string; via?: string }; logged_by: string | null; source: string };
 
 export function Medicamentos({ babyId, tratamientos, administraciones, nombres, tz }: { babyId: string; tratamientos: Tratamiento[]; administraciones: Adm[]; nombres: Record<string, string>; tz: string }) {
   const router = useRouter();
@@ -60,7 +60,7 @@ export function Medicamentos({ babyId, tratamientos, administraciones, nombres, 
             <ul className="tz-list tz-glass" style={{ margin: 0, padding: 0, listStyle: "none" }}>
               {administraciones.map((a) => (
                 <li key={a.id} className="tz-row">
-                  <span className="grow"><span className="text-body-strong">{nombreDe(a.payload.medication_id)}</span><span className="text-body-sm tz-muted">{a.payload.cantidad_textual}{a.payload.via ? ` · ${VIA[a.payload.via] ?? a.payload.via}` : ""} · {nombres[a.logged_by] ?? "Alguien"}{a.source === "mcp" ? " desde Claude" : ""}</span></span>
+                  <span className="grow"><span className="text-body-strong">{nombreDe(a.payload.medication_id)}</span><span className="text-body-sm tz-muted">{a.payload.cantidad_textual}{a.payload.via ? ` · ${VIA[a.payload.via] ?? a.payload.via}` : ""} · {nombres[a.logged_by ?? ""] ?? "Alguien"}{a.source === "mcp" ? " desde Claude" : ""}</span></span>
                   <span className="end"><span className="text-body-strong tz-num">{fHora(new Date(a.started_at).getTime(), tz)}</span><span className="text-body-sm tz-muted">{etiquetaDia(new Date(a.started_at).getTime(), ahora, tz)}</span></span>
                 </li>
               ))}

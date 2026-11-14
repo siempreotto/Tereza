@@ -3,7 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // Refresca la sesión de Supabase en cada request y manda a /entrar a quien no la tenga.
 // Es un chequeo optimista: cada página y acción vuelve a validar al usuario en el servidor.
-const PUBLICAS = ["/entrar", "/salud", "/api/salud"];
+const PUBLICAS = ["/entrar", "/salud", "/api/salud", "/sw.js"];
 const PREFIJOS_PUBLICOS = ["/auth/", "/invitacion/", "/.well-known/", "/oauth/", "/api/mcp"];
 
 export async function proxy(request: NextRequest) {

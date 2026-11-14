@@ -345,7 +345,7 @@ function HojaDetalle({ cerrar, evento: e0, ahora, ajustes: a, eliminar, alCorreg
   const d = describir(e0, opts);
   const set = (k: string, v: unknown) => setPayload((p) => ({ ...p, [k]: v }));
   const u = a.unidadVolumen, paso = u === "oz" ? 0.5 : 10;
-  const quien = nombres[e0.logged_by] ?? "Alguien";
+  const quien = nombres[e0.logged_by ?? ""] ?? "Alguien";
   const guardar = async () => {
     setOcupado(true);
     const r = await corregirEvento({ eventId: e0.id, expectedVersion: e0.version, startedAt: iso(inicio), endedAt: fin ? iso(fin) : e0.ended_at === null ? null : undefined, payload, notas: notas || null });
@@ -367,7 +367,7 @@ function HojaDetalle({ cerrar, evento: e0, ahora, ajustes: a, eliminar, alCorreg
     return (
       <Sheet label="Elegir qué versión guardar" onClose={cerrar}>
         <div className="tz-stack s8">
-          <h2 className="text-title-lg">{nombres[conflicto.logged_by] === quien ? "Alguien más" : "Otro cuidador"} también cambió este registro</h2>
+          <h2 className="text-title-lg">{nombres[conflicto.logged_by ?? ""] === quien ? "Alguien más" : "Otro cuidador"} también cambió este registro</h2>
           <p className="text-body tz-muted">Lo editaron mientras tú lo editabas. Elige cuál se queda; la otra queda en el historial del registro.</p>
         </div>
         <div className="tz-stack s8">
