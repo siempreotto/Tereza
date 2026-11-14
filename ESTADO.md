@@ -1,8 +1,9 @@
 # Estado de Tereza
 
-**Hito actual:** 4. Diario y análisis (código listo)
-**Rama:** `claude/hito-4-diario` (incluye los hitos anteriores)
-**Último preview:** https://tereza-git-claude-hito-4-diario-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
+**Hito actual:** 5. Salud (código listo)
+**Rama:** `claude/hito-5-salud` (incluye los hitos anteriores)
+**Último preview:** https://tereza-git-claude-hito-5-salud-sento-product.vercel.app
+**Configuración pendiente:** ver `CONFIGURACION.md` (pide entrar con tu cuenta de Vercel del equipo Sento Product)
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».
@@ -54,6 +55,16 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Resumen hoy, 7 y 30 días: sueño (noche, siestas, despertares), tomas (pecho por lado, biberón), pañales
 - [x] Estadísticas portadas a TS con pruebas (35 en total)
 - [ ] Probado en el teléfono (necesita los ajustes de Supabase)
+
+## Hito 5: Salud
+- [x] Curvas OMS oficiales (tablas LMS por día, 0–24 meses, del paquete oficial `WorldHealthOrganization/anthro`; GPL-3 el código, datos de la OMS) en `src/data/who/oms.json`; percentil con la fórmula LMS y el ajuste de la OMS fuera de ±3; edad corregida
+- [x] Crecimiento: gráfica P3/P50/P97 con banda P15–P85 y los puntos del bebé; tabla con percentiles; peso en lb y oz con kg al lado
+- [x] Medicamentos: tratamientos activos con la indicación textual, terminar con deshacer, historial de dosis (solo registra; nunca calcula ni sugiere)
+- [x] Pediatra: visitas con notas, vacunas y adjuntos en Storage privado (`visitas/{hogar}/{visita}/…`, enlaces firmados de 5 minutos), próxima cita
+- [x] Dudas para la consulta: agregar, resolver en una visita, volver a pendiente
+- [x] Resumen para el pediatra: desde la última visita o una fecha; crecimiento, sueño, tomas, pañales, medicamentos, síntomas y dudas; imprimir o compartir
+- [x] Pruebas: 42 en verde (percentiles contra valores publicados de la OMS, resumen)
+- [ ] Probado en el teléfono (necesita la configuración de `CONFIGURACION.md`)
 
 ## Pendientes manuales tuyos
 - **Para probar el acceso en el preview (5 minutos, en Supabase):**

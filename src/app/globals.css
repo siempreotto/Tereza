@@ -36,3 +36,11 @@ input.tz-input, select.tz-input, textarea.tz-input { font: 500 16px/22px var(--f
   .tz-screen:not([data-theme="noche"]) .tz-sheet { animation: tz-up .2s ease-out; }
   @keyframes tz-up { from { opacity: 0; translate: 0 24px; } to { opacity: 1; translate: 0 0; } }
 }
+
+/* Impresión del resumen para el pediatra: solo el documento, sin barras ni fondos. */
+@media print {
+  .tz-side, .tz-bottom, .tz-dock, .tz-toast, form[aria-label="Elegir desde cuándo"], .tz-back { display: none !important; }
+  .tz-screen, html, body { background: #fff !important; color: #000 !important; }
+  .tz-app { display: block !important; }
+  .tz-doc { border: 0; padding: 0; }
+}
