@@ -8,6 +8,8 @@ const PREFIJOS_PUBLICOS = ["/auth/", "/invitacion/", "/.well-known/", "/oauth/",
 
 export async function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  // El MCP y sus metadatos usan tokens Bearer, no cookies: no hace falta tocar la sesión.
+  if (path.startsWith("/api/mcp") || path.startsWith("/.well-known/")) return NextResponse.next();
   let response = NextResponse.next({ request });
   const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "", {
     cookies: {

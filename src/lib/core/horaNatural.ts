@@ -32,7 +32,7 @@ export function interpretarHora(texto: string | undefined | null, ahora: number,
   if (!m) return { error: "No entendí la hora. Usa algo como «a las 2:30 p.m.», «14:30» o «hace 20 minutos»." };
   const [, dia, hs, mins, extra, suf] = m;
   let h = n(hs);
-  let min = mins ? Number(mins) : extra ? (extra === "media" ? 30 : extra === "cuarto" ? 15 : n(extra)) : 0;
+  const min = mins ? Number(mins) : extra ? (extra === "media" ? 30 : extra === "cuarto" ? 15 : n(extra)) : 0;
   if (Number.isNaN(h) || Number.isNaN(min) || h > 23 || min > 59) return { error: "No entendí la hora." };
   const p = partes(ahora, tz);
   const baseDia = (offset: number) => ({ y: p.anio, mo: p.mes, d: p.dia + offset });

@@ -362,6 +362,12 @@ export type Database = {
           },
         ]
       }
+      mcp_revocados: {
+        Row: { client_id: string; revocado_en: string; user_id: string }
+        Insert: { client_id: string; revocado_en?: string; user_id?: string }
+        Update: { client_id?: string; revocado_en?: string; user_id?: string }
+        Relationships: []
+      }
       measurements: {
         Row: {
           baby_id: string

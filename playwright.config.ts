@@ -2,6 +2,8 @@ import { defineConfig, devices } from "@playwright/test";
 
 export default defineConfig({
   testDir: "tests/e2e",
+  // Todas las pruebas comparten el hogar del usuario de pruebas: en serie para que no se pisen.
+  workers: 1,
   // PW_EXECUTABLE_PATH permite usar un Chromium ya instalado (p. ej. en entornos remotos).
   use: {
     baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",

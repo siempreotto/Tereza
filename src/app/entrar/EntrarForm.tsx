@@ -33,6 +33,17 @@ export function EntrarForm({ next, errorEnlace }: { next: string; errorEnlace: b
     setPaso("codigo");
   };
 
+  // Google vuelve a /auth/confirmar con ?code (PKCE) y de ahí a donde ibas.
+  const google = async () => {
+    setOcupado(true);
+    setError(null);
+    const { error: err } = await supabaseBrowser().auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/confirmar?next=${encodeURIComponent(next)}` },
+    });
+    if (err) { setOcupado(false); setError("No pudimos abrir Google. Vuelve a intentarlo o entra con tu correo."); }
+  };
+
   const verificar = async (e: FormEvent) => {
     e.preventDefault();
     const token = codigo.replace(/\D/g, "");
@@ -68,8 +79,7 @@ export function EntrarForm({ next, errorEnlace }: { next: string; errorEnlace: b
           </div>
           {error ? <p id="entrar-error" role="alert" className="text-body-sm c-danger">{error}</p> : null}
           <Button type="submit" variant="primary" size="lg" block disabled={ocupado}>{ocupado ? "Enviando…" : "Continuar con mi correo"}</Button>
-          <Button variant="glass" size="lg" block disabled aria-describedby="google-pronto">Continuar con Google</Button>
-          <p id="google-pronto" className="text-body-sm tz-muted" style={{ textAlign: "center" }}>Entrar con Google estará disponible pronto.</p>
+          <Button variant="glass" size="lg" block disabled={ocupado} onClick={google}>Continuar con Google</Button>
         </form>
       ) : (
         <form className="tz-stack" style={{ marginTop: "auto" }} onSubmit={verificar} noValidate>

@@ -66,6 +66,18 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Pruebas: 42 en verde (percentiles contra valores publicados de la OMS, resumen)
 - [ ] Probado en el teléfono (necesita la configuración de `CONFIGURACION.md`)
 
+## Hito 6: servidor MCP
+- [x] `/api/mcp` (Streamable HTTP, `mcp-handler`) con `withMcpAuth`: 401 + `WWW-Authenticate` con `resource_metadata`
+- [x] `/.well-known/oauth-protected-resource` (y `/api/mcp`): recurso exacto y servidor de autorización de Supabase
+- [x] Validación del token contra el JWKS (ES256) de Supabase; exige `client_id` (una sesión del navegador no sirve) y aplica RLS con el token del usuario. Sin llave secreta
+- [x] 27 herramientas: estado, temporizadores, registrar, corregir (con versión y CONFLICTO), eliminar/deshacer, consultar, resumen, analizar período, predicción, medidas con percentil, medicamentos (solo registra), tratamientos, dudas, cita, resumen para el pediatra, configuración (anterior → nuevo y cómo revertir), invitar
+- [x] Horas en lenguaje natural con aviso cuando se desambigua; volúmenes en la unidad del hogar
+- [x] Auditoría por llamada en `mcp_audit` (herramienta, resultado y código; sin argumentos ni datos de salud)
+- [x] `/oauth/consent`: cliente, destino, qué podrá hacer según tu rol, Permitir / No permitir; solo devuelve a claude.ai, claude.com o loopback
+- [x] Más › Conexión con Claude: cómo conectarla, tus conexiones con último uso y Revocar (revoca el permiso en Supabase y bloquea al instante los tokens vigentes)
+- [x] Pruebas de integración contra la base real (`pnpm test:integracion`): 8/8, incluidos permisos del rol limitado y conflicto de versión
+- [ ] Conector agregado en Claude y probado con las 5 frases (falta «Save changes» en Supabase › Authentication › OAuth Server)
+
 ## Pendientes manuales tuyos
 - **Para probar el acceso en el preview (5 minutos, en Supabase):**
   1. Authentication › URL Configuration: Site URL = `https://tereza-kappa.vercel.app`; en Redirect URLs agrega `https://tereza-*-sento-product.vercel.app/**` y `http://localhost:3000/**`.

@@ -6,7 +6,7 @@ test("sin sesión, la portada manda a /entrar", async ({ page }) => {
   await expect(page).toHaveURL(/\/entrar$/);
   await expect(page.getByRole("heading", { name: "El día de tu bebé, a un toque." })).toBeVisible();
   await expect(page.getByRole("button", { name: "Continuar con mi correo" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continuar con Google" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Continuar con Google" })).toBeEnabled();
 });
 
 test("conserva a dónde ibas para volver después de entrar", async ({ page }) => {

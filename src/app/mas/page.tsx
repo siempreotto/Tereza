@@ -22,9 +22,9 @@ export default async function Mas() {
             {c.miembro.rol !== "limitado" ? <Link className="tz-row" href="/mas/patrones"><span className="grow"><span className="text-body-strong">Patrones de sueño</span><span className="text-body-sm tz-muted">Bandas por día y horas contra la referencia por edad</span></span><Icon name="chevron-right" /></Link> : null}
             {c.miembro.rol !== "limitado" ? <Link className="tz-row" href="/mas/resumen"><span className="grow"><span className="text-body-strong">Resumen</span><span className="text-body-sm tz-muted">Sueño, tomas y pañales: hoy, 7 o 30 días</span></span><Icon name="chevron-right" /></Link> : null}
             {admin ? <Link className="tz-row" href="/mas/cuidadores"><span className="grow"><span className="text-body-strong">Cuidadores y roles</span><span className="text-body-sm tz-muted">Invita a quien cuida y elige qué ve</span></span><Icon name="chevron-right" /></Link> : null}
+            <Link className="tz-row" href="/mas/claude"><span className="grow"><span className="text-body-strong">Conexión con Claude</span><span className="text-body-sm tz-muted">Registra y consulta hablando con Claude</span></span><Icon name="chevron-right" /></Link>
             <Link className="tz-row" href="/salud"><span className="grow"><span className="text-body-strong">Estado técnico</span><span className="text-body-sm tz-muted">Versión y conexión</span></span><Icon name="chevron-right" /></Link>
           </nav>
-          <p className="text-body-sm tz-muted">Ajustes de unidades, exportar datos y la conexión con Claude llegan en los próximos hitos.</p>
           <form action="/salir" method="post"><button className="tz-btn tz-btn-ghost text-button" type="submit">Salir</button></form>
         </main>
       </div>
