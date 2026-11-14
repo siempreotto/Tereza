@@ -1,8 +1,8 @@
 # Estado de Tereza
 
-**Hito actual:** 2. Acceso y alta (código listo; faltan 2 ajustes tuyos en Supabase para probarlo de punta a punta)
-**Rama:** `claude/hito-2-acceso`
-**Último preview:** https://tereza-git-claude-hito-2-acceso-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
+**Hito actual:** 3. Hoy y registro (en curso)
+**Rama:** `claude/hito-3-hoy`
+**Último preview:** https://tereza-git-claude-hito-3-hoy-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».
@@ -35,6 +35,16 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Probado contra la base (como usuario real con RLS): crear hogar y bebé, invitar, ver y aceptar, reusar token y otro correo
 - [x] e2e públicos 16/16; e2e con sesión escritos (`tests/e2e/onboarding.spec.ts`), en pausa hasta tener red a Supabase desde el entorno
 - [ ] Probado en el preview de punta a punta (después de los 2 ajustes de abajo)
+
+## Hito 3: avance
+- [x] Lógica de core.js portada a TypeScript con pruebas (33): horas en la zona del hogar, unidades (lb y oz), sueño por día, predictor, alarmas
+- [x] Hoy: estado como héroe (despierta, durmiendo, toma de pecho por lado), accesos rápidos, estimación con «¿Por qué esta franja?», lista del día
+- [x] Hojas de registro: sueño, toma (pecho, biberón, sólidos, extracción), pañal, medicamento, temperatura o síntoma, nota; detalle con edición y conflicto
+- [x] Deshacer en vez de confirmar (7 s con Deshacer, 4 s sin)
+- [x] Modo noche automático por horario del hogar e interruptor por dispositivo
+- [x] Barra inferior (móvil) y lateral (escritorio); manifiesto e íconos de la PWA
+- [x] Flujo de temporizadores probado contra la base (iniciar, cambiar lado, cerrar, deshacer, duplicados, versión)
+- [ ] Probado en el teléfono (necesita los ajustes de Supabase de abajo)
 
 ## Pendientes manuales tuyos
 - **Para probar el acceso en el preview (5 minutos, en Supabase):**

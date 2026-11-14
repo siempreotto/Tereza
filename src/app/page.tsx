@@ -1,49 +1,36 @@
-import Link from "next/link";
-import { CategoryIcon } from "@/components/tz";
 import { requiereHogar } from "@/lib/auth/session";
-import { edadTexto } from "@/lib/core/edad";
+import { ajustesDelHogar, eventosRecientes, nombresMiembros, tratamientosActivos } from "@/lib/datos/hoy";
+import { Hoy } from "@/components/hoy/Hoy";
+import { Tema } from "@/components/hoy/Tema";
+import { Avisos } from "@/components/hoy/Aviso";
+import { Barra } from "@/components/hoy/Barra";
 
 export const dynamic = "force-dynamic";
 
-// Hito 2: portada provisional con el hogar y el bebé. «Hoy» (estado, timers y registro) llega en el Hito 3.
 export default async function Inicio() {
   const c = await requiereHogar();
   const bebe = c.bebes[0];
+  const ajustes = await ajustesDelHogar(c.hogar.id);
+  if (!bebe) {
+    return (
+      <Tema modo={ajustes.nocheUiModo} desde={ajustes.nocheUiDesde} hasta={ajustes.nocheUiHasta} tz={ajustes.tz}>
+        <main className="tz-main solo"><p className="text-body">Aún no hay un bebé en este hogar. Pídele a quien administra que lo agregue.</p></main>
+      </Tema>
+    );
+  }
+  const [eventos, nombres, tratamientos] = await Promise.all([
+    eventosRecientes(bebe.id, ajustes.tz),
+    nombresMiembros(c.hogar.id),
+    c.miembro.rol === "limitado" ? Promise.resolve([]) : tratamientosActivos(bebe.id),
+  ]);
   return (
-    <div className="tz-screen" data-theme="light">
-      <main className="tz-main">
-        <div className="tz-top">
-          {bebe ? (
-            <span className="tz-baby">
-              <span className="tz-avatar">{bebe.nombre.charAt(0)}</span>
-              <span className="text-body-strong">{bebe.nombre}</span>
-              <span className="text-body-sm tz-muted">{edadTexto(bebe.fecha_nacimiento, new Date(), bebe.semanas_gestacion)}</span>
-            </span>
-          ) : <span className="tz-logo">Tereza</span>}
+    <Tema modo={ajustes.nocheUiModo} desde={ajustes.nocheUiDesde} hasta={ajustes.nocheUiHasta} tz={ajustes.tz}>
+      <Avisos alto>
+        <div className="tz-app">
+          <Barra activa="hoy" rol={c.miembro.rol} bebe={{ nombre: bebe.nombre, fecha_nacimiento: bebe.fecha_nacimiento, semanas_gestacion: bebe.semanas_gestacion }} yo={c.miembro.nombre} />
+          <Hoy bebe={bebe} ajustes={ajustes} eventos={eventos} nombres={nombres} tratamientos={tratamientos} rol={c.miembro.rol} yo={{ id: c.userId, nombre: c.miembro.nombre }} />
         </div>
-        <section className="tz-hero tz-glass" aria-label="Tu hogar">
-          <div className="tz-hero-state">
-            <span className="text-label tz-muted">{c.hogar.nombre}</span>
-            <p className="text-title-lg">Hola, {c.miembro.nombre}</p>
-            <p className="text-body tz-muted">Ya está listo tu hogar. El registro del día (sueño, tomas y pañales con un toque) llega en la próxima versión.</p>
-          </div>
-        </section>
-        <nav className="tz-list tz-glass" aria-label="Opciones">
-          {c.miembro.rol === "admin" ? (
-            <Link className="tz-row" href="/mas/cuidadores">
-              <CategoryIcon category="doctor" />
-              <span className="grow"><span className="text-body-strong">Cuidadores y roles</span><span className="text-body-sm tz-muted">Invita a quien cuida y elige qué ve</span></span>
-            </Link>
-          ) : null}
-          <Link className="tz-row" href="/salud">
-            <CategoryIcon category="growth" />
-            <span className="grow"><span className="text-body-strong">Estado técnico</span><span className="text-body-sm tz-muted">Versión y conexión</span></span>
-          </Link>
-        </nav>
-        <form action="/salir" method="post">
-          <button className="tz-btn tz-btn-ghost text-button" type="submit">Salir</button>
-        </form>
-      </main>
-    </div>
+      </Avisos>
+    </Tema>
   );
 }
