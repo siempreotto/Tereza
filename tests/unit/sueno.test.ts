@@ -100,3 +100,30 @@ describe("predictor", () => {
     if (p.estado === "ok") expect(p.desde).toBe(at(8, 6, 0) + 135 * MIN - 15 * MIN);
   });
 });
+
+import { estadisticasPeriodo, segmentosDelDia } from "@/lib/core/sueno";
+
+describe("estadísticas del período", () => {
+  it("promedia por día con registros: sueño, tomas y pañales", () => {
+    const evs = [
+      ...dia(6), ...dia(7),
+      ev("toma_biberon", at(6, 9), null, { contenido: "materna", volumen_ml: 118, sobrante_ml: 15 }),
+      ev("toma_pecho", at(7, 9), at(7, 9, 15), { lado_inicial: "izq", segundos_izq: 480, segundos_der: 420 }),
+      ev("panal", at(6, 10), null, { mojado: true, sucio: false }),
+      ev("panal", at(7, 10), null, { mojado: true, sucio: true }),
+    ];
+    const s = estadisticasPeriodo(evs, at(6, 0), at(8, 0), at(8, 12), H);
+    expect(s.dias).toBe(2);
+    expect(s.tomas).toBe(1);
+    expect(s.biberonMlTotal).toBe(103);
+    expect(s.pechoIzqMin).toBe(8);
+    expect(s.mojados).toBe(1);
+    expect(s.sucios).toBe(0.5);
+    expect(Math.round(s.siestas)).toBe(3);
+  });
+  it("segmentos de sueño del día para la línea de tiempo", () => {
+    const seg = segmentosDelDia(dia(7), at(7, 12), at(7, 23), H);
+    expect(seg[0]).toMatchObject({ noche: true, desdeMin: 0 });
+    expect(seg.filter((x) => !x.noche)).toHaveLength(3);
+  });
+});

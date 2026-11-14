@@ -24,6 +24,7 @@ export type Props = {
   tratamientos: { id: string; nombre: string; indicacion: string }[];
   rol: "admin" | "cuidador" | "limitado";
   yo: { id: string; nombre: string };
+  hojaInicial?: HojaAbierta | null;
 };
 
 const CAT: Record<string, Category> = { sleep: "sleep", feed: "feed", diaper: "diaper", meds: "meds" };
@@ -33,7 +34,7 @@ export function Hoy(p: Props) {
   const { avisar } = useAviso();
   const { noche, alternar } = useTema();
   const [ahora, setAhora] = useState(() => Date.now());
-  const [hoja, setHoja] = useState<HojaAbierta | null>(null);
+  const [hoja, setHoja] = useState<HojaAbierta | null>(p.hojaInicial ?? null);
   // Estado local optimista; se resincroniza cuando el servidor manda eventos nuevos.
   const [eventos, setEventos] = useState(p.eventos);
   const [base, setBase] = useState(p.eventos);

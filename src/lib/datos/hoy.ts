@@ -50,3 +50,36 @@ export async function tratamientosActivos(babyId: string): Promise<{ id: string;
   const { data } = await db.from("medications").select("id, nombre, indicacion_textual").eq("baby_id", babyId).eq("activo", true).order("creado_en");
   return (data ?? []).map((m) => ({ id: m.id, nombre: m.nombre, indicacion: m.indicacion_textual }));
 }
+
+/** Eventos que se cruzan con [desde, hasta) (incluye sueños que empezaron antes y terminan dentro). */
+export async function eventosRango(babyId: string, desde: number, hasta: number): Promise<Evento[]> {
+  const db = await supabaseServer();
+  const d = new Date(desde - 24 * 3_600_000).toISOString(), h = new Date(hasta).toISOString();
+  const { data } = await db
+    .from("events")
+    .select("id, tipo, started_at, ended_at, payload, notas, logged_by, source, version, eliminado_en")
+    .eq("baby_id", babyId)
+    .is("eliminado_en", null)
+    .gte("started_at", d)
+    .lt("started_at", h)
+    .order("started_at", { ascending: false })
+    .limit(3000);
+  return (data ?? []) as Evento[];
+}
+
+/** Página con barra: hogar, ajustes y bebé, o redirige. Para Diario, Patrones, Resumen y Salud. */
+export async function paginaConBebe(opciones: { soloSalud?: boolean } = {}) {
+  const { requiereHogar } = await import("@/lib/auth/session");
+  const { redirect } = await import("next/navigation");
+  const c = await requiereHogar();
+  if (opciones.soloSalud && c.miembro.rol === "limitado") redirect("/");
+  const bebe = c.bebes[0];
+  if (!bebe) redirect("/");
+  const ajustes = await ajustesDelHogar(c.hogar.id);
+  return { c, bebe, ajustes };
+}
+
+/** Hora del servidor para la página (fuera del componente, para que el render sea puro). */
+export function ahoraMs(): number {
+  return Date.now();
+}

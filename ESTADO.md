@@ -1,8 +1,8 @@
 # Estado de Tereza
 
-**Hito actual:** 3. Hoy y registro (en curso)
-**Rama:** `claude/hito-3-hoy`
-**Último preview:** https://tereza-git-claude-hito-3-hoy-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
+**Hito actual:** 4. Diario y análisis (código listo)
+**Rama:** `claude/hito-4-diario` (incluye los hitos anteriores)
+**Último preview:** https://tereza-git-claude-hito-4-diario-sento-product.vercel.app (pide entrar con tu cuenta de Vercel del equipo Sento Product)
 
 ## Hito 0: infraestructura ✔
 Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Product). `/api/salud` responde «Supabase: conectado».
@@ -44,7 +44,16 @@ Repo, Supabase (`jkqwlczjqoqmxhatqfad`, us-east-1) y Vercel (`tereza`, Sento Pro
 - [x] Modo noche automático por horario del hogar e interruptor por dispositivo
 - [x] Barra inferior (móvil) y lateral (escritorio); manifiesto e íconos de la PWA
 - [x] Flujo de temporizadores probado contra la base (iniciar, cambiar lado, cerrar, deshacer, duplicados, versión)
+- [x] Deploy del preview listo (READY)
 - [ ] Probado en el teléfono (necesita los ajustes de Supabase de abajo)
+
+## Hito 4: Diario y análisis
+- [x] Diario: línea de 24 h con bloques de noche y siesta, eventos agrupados, línea de «ahora», tira de la semana y navegación por días
+- [x] Detalle y edición desde el Diario (misma hoja que Hoy: horas, campos, quién y desde dónde, eliminar con deshacer, conflicto)
+- [x] Patrones semanales: bandas por día y horas en 24 h contra la referencia por edad; semanas anteriores
+- [x] Resumen hoy, 7 y 30 días: sueño (noche, siestas, despertares), tomas (pecho por lado, biberón), pañales
+- [x] Estadísticas portadas a TS con pruebas (35 en total)
+- [ ] Probado en el teléfono (necesita los ajustes de Supabase)
 
 ## Pendientes manuales tuyos
 - **Para probar el acceso en el preview (5 minutos, en Supabase):**

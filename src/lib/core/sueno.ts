@@ -133,3 +133,62 @@ export function predecir(evs: Evento[], bebe: { fechaNacimiento: string; semanas
   if (propias) avisos.push("Usa tus ventanas de vigilia, no la referencia por edad.");
   return { estado: "ok", tipo, desde: centro - 15 * MIN, hasta: centro + 15 * MIN, confianza: conf, base, rangoEdadMin: rango, ajustadoAlRango: acotada !== ventana, ultimoDespertar: fin, avisos, usaVentanasPropias: !!propias };
 }
+
+export type Estadisticas = {
+  dias: number;
+  suenoMin: number; nocheMin: number; siestasMin: number; siestas: number;
+  tomas: number; pecho: number; pechoMin: number; pechoIzqMin: number; pechoDerMin: number;
+  biberon: number; biberonMl: number; biberonMlTotal: number; solidos: number;
+  mojados: number; sucios: number; despertaresNoche: number;
+};
+
+/** Promedios por día del período [desde, hasta) en la zona del hogar (port de periodStats).
+ *  Solo cuenta días con algún registro, como el prototipo y la RPC estadisticas_periodo. */
+export function estadisticasPeriodo(evs: Evento[], desde: number, hasta: number, ahora: number, h: Hogar): Estadisticas {
+  const ev = vivos(evs);
+  const noche = esNoche(h);
+  let dias = 0, sueno = 0, n = 0, s = 0, siestas = 0;
+  for (let d = inicioDia(desde, h.tz); d < hasta; d = sumarDias(d, 1, h.tz)) {
+    const d2 = sumarDias(d, 1, h.tz);
+    if (!ev.some((e) => ms(e.started_at) >= d && ms(e.started_at) < d2)) continue;
+    dias++;
+    const x = suenoDelDia(ev, d, ahora, h);
+    sueno += x.totalMin; n += x.nocheMin; s += x.siestasMin; siestas += x.siestas;
+  }
+  const div = Math.max(1, dias);
+  const enRango = ev.filter((e) => ms(e.started_at) >= desde && ms(e.started_at) < hasta);
+  const pecho = enRango.filter((e) => e.tipo === "toma_pecho" && e.ended_at);
+  const bib = enRango.filter((e) => e.tipo === "toma_biberon");
+  const pan = enRango.filter((e) => e.tipo === "panal");
+  const sol = enRango.filter((e) => e.tipo === "toma_solidos").length;
+  const prom = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0);
+  const pp = (e: Evento) => e.payload as { segundos_izq?: number; segundos_der?: number; volumen_ml?: number; sobrante_ml?: number; mojado?: boolean; sucio?: boolean };
+  // Despertares: sueños nocturnos que empiezan después de medianoche y antes de la hora de fin de la ventana nocturna.
+  const despertares = enRango.filter((e) => e.tipo === "sueno" && noche(ms(e.started_at)) && partesHora(ms(e.started_at), h.tz) < Number(h.nocheHasta.slice(0, 2))).length;
+  return {
+    dias, suenoMin: sueno / div, nocheMin: n / div, siestasMin: s / div, siestas: siestas / div,
+    tomas: (pecho.length + bib.length + sol) / div,
+    pecho: pecho.length / div, pechoMin: prom(pecho.map((e) => (ms(e.ended_at!) - ms(e.started_at)) / MIN)),
+    pechoIzqMin: prom(pecho.map((e) => (pp(e).segundos_izq ?? 0) / 60)), pechoDerMin: prom(pecho.map((e) => (pp(e).segundos_der ?? 0) / 60)),
+    biberon: bib.length / div, biberonMl: prom(bib.map((e) => pp(e).volumen_ml ?? 0)),
+    biberonMlTotal: bib.reduce((t, e) => t + (pp(e).volumen_ml ?? 0) - (pp(e).sobrante_ml ?? 0), 0),
+    solidos: sol / div,
+    mojados: pan.filter((e) => pp(e).mojado).length / div, sucios: pan.filter((e) => pp(e).sucio).length / div,
+    despertaresNoche: despertares / div,
+  };
+}
+
+function partesHora(t: number, tz: string): number {
+  return Number(new Intl.DateTimeFormat("en-US", { timeZone: tz, hour: "numeric", hourCycle: "h23" }).format(new Date(t))) % 24;
+}
+
+/** Segmentos de sueño dentro del día local (minutos desde medianoche), para bandas y línea de tiempo. */
+export function segmentosDelDia(evs: Evento[], diaMs: number, ahora: number, h: Hogar): { id: string; noche: boolean; desdeMin: number; minutos: number }[] {
+  const D = inicioDia(diaMs, h.tz), D2 = sumarDias(D, 1, h.tz);
+  const noche = esNoche(h);
+  return vivos(evs).flatMap((e) => {
+    if (e.tipo !== "sueno") return [];
+    const a = Math.max(ms(e.started_at), D), b = Math.min(e.ended_at ? ms(e.ended_at) : Math.min(ahora, D2), D2);
+    return b > a ? [{ id: e.id, noche: noche(ms(e.started_at)), desdeMin: (a - D) / MIN, minutos: (b - a) / MIN }] : [];
+  });
+}

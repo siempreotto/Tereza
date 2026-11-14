@@ -22,7 +22,12 @@ export function Barra({ activa, rol, bebe, yo }: { activa: string; rol: "admin" 
   const items = rol === "limitado" ? NAV.filter((n) => LIMITADO.includes(n.key)) : NAV;
   const ir = (k: string) => { const r = RUTAS[k]; if (r && r !== path) router.push(r); };
   const abrir = () => setMenu(true);
-  const elegir = (tipo: string) => { setMenu(false); window.dispatchEvent(new CustomEvent("tereza:registrar", { detail: tipo })); };
+  // En Hoy abre la hoja directamente; en otras pantallas lleva a Hoy con la hoja abierta.
+  const elegir = (tipo: string) => {
+    setMenu(false);
+    if (path === "/") window.dispatchEvent(new CustomEvent("tereza:registrar", { detail: tipo }));
+    else router.push(`/?registrar=${tipo}`);
+  };
   const opciones = [
     { k: "sueno", l: "Sueño", cat: "sleep" as const }, { k: "toma", l: "Toma", cat: "feed" as const }, { k: "panal", l: "Pañal", cat: "diaper" as const },
     ...(rol === "limitado" ? [] : [{ k: "medicamento", l: "Medicamento", cat: "meds" as const }, { k: "temperatura", l: "Temperatura o síntoma", cat: "doctor" as const }, { k: "nota", l: "Nota", cat: "growth" as const }]),
