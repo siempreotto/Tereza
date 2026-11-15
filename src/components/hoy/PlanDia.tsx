@@ -42,7 +42,7 @@ function Reloj({ plan, ahora, tz }: { plan: PlanOk; ahora: number; tz: string })
   );
 }
 
-export function PlanDia({ plan, ahora, tz, nombre }: { plan: Plan; ahora: number; tz: string; nombre: string }) {
+export function PlanDia({ plan, ahora, tz, nombre, alTocar }: { plan: Plan; ahora: number; tz: string; nombre: string; alTocar?: (b: Bloque) => void }) {
   const [porQue, setPorQue] = useState(false);
   if (plan.estado !== "ok") {
     return <div className="tz-card tz-glass tz-stack s8"><span className="text-label tz-muted">Plan de hoy</span><p className="text-body">{plan.razon}</p></div>;
@@ -71,8 +71,13 @@ export function PlanDia({ plan, ahora, tz, nombre }: { plan: Plan; ahora: number
               <span className="grow tz-stack" style={{ gap: 0 }}>
                 <span className="text-body-strong">{nombreBloque(b, plan.siestas)}{b.estado === "en_curso" ? " · en curso" : ""}</span>
                 <span className="text-body-sm tz-muted tz-num">{horas}{b.tipo === "siesta" && b.duracionMin && b.estado !== "hecho" ? ` · ≈ ${fDuracion(b.duracionMin)}` : b.tipo === "siesta" && b.duracionMin ? ` · ${fDuracion(b.duracionMin)}` : ""}</span>
+                <span className="text-body-sm tz-muted">{FUENTE[b.fuente]}</span>
               </span>
-              <span className="text-body-sm tz-muted">{FUENTE[b.fuente]}</span>
+              {alTocar ? (
+                <button type="button" className="tz-btn tz-btn-glass text-button tz-plan-accion" onClick={() => alTocar(b)} aria-label={`${b.estado === "estimado" ? "Registrar" : "Editar"} ${nombreBloque(b, plan.siestas)}`}>
+                  {b.estado === "estimado" ? (b.tipo === "siesta" ? "Ya fue" : "Registrar") : "Editar"}
+                </button>
+              ) : null}
             </li>
           );
         })}

@@ -7,7 +7,7 @@ import { useAviso } from "./Aviso";
 import { useTema } from "./Tema";
 import { Hojas, type HojaAbierta } from "./Hojas";
 import { PlanDia } from "./PlanDia";
-import { planDelDia } from "@/lib/core/planDia";
+import { planDelDia, type Bloque } from "@/lib/core/planDia";
 import { cambiarLado, corregirEvento, eliminarEvento, registrarEvento, restaurarEvento, terminarTimer } from "@/lib/acciones/eventos";
 import { COMO, LUGAR, describir, ms, segundosPecho, textoGuardado, TIPOS_TOMA, type Evento, type Payload } from "@/lib/core/eventos";
 import { alarmaPocosPanales } from "@/lib/core/alarmas";
@@ -79,12 +79,26 @@ export function Hoy(p: Props) {
   const ultimaToma = vivos.filter((e) => TIPOS_TOMA.includes(e.tipo)).sort(porInicioDesc)[0];
   const ultimoPanal = vivos.filter((e) => e.tipo === "panal").sort(porInicioDesc)[0];
   const sd = suenoDelDia(vivos, hoy, ahora, a);
-  const deHoy = vivos.filter((e) => ms(e.started_at) >= hoy || (!e.ended_at && (e.tipo === "sueno" || e.tipo === "toma_pecho"))).sort(porInicioDesc);
+  // De hoy: lo que empezó hoy, lo que sigue en curso y los sueños que terminaron hoy (la noche que acabó esta mañana).
+  const deHoy = vivos.filter((e) => ms(e.started_at) >= hoy || (!e.ended_at && (e.tipo === "sueno" || e.tipo === "toma_pecho")) || (e.tipo === "sueno" && e.ended_at && ms(e.ended_at) >= hoy)).sort(porInicioDesc);
   const minuto = Math.floor(ahora / 60_000);
   const plan = useMemo(() => planDelDia(vivos, { fechaNacimiento: bebe.fecha_nacimiento, semanasGestacion: bebe.semanas_gestacion, nombre: bebe.nombre }, ahora, a),
     // El plan se recalcula cada minuto o cuando cambian los registros.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [eventos, pendientes, cierres, bebe, a, minuto]);
+  /** Tocar un bloque del plan: registrar lo estimado (con sus horas como punto de partida) o editar lo registrado. */
+  const tocarBloque = (b: Bloque) => {
+    if (b.estado !== "estimado") {
+      const ev = vivos.find((e) => e.id === b.eventoId);
+      if (ev) setHoja({ tipo: "detalle", evento: ev });
+      return;
+    }
+    if (b.tipo === "despertar") return setHoja({ tipo: "desperto" });
+    if (b.tipo === "dormir") return setHoja({ tipo: "dormir" });
+    const dur = (b.duracionMin ?? 60) * MIN;
+    const ini = Math.min(b.hora, ahora - dur);
+    setHoja({ tipo: "sueno", modo: "pasado", inicio: ini, fin: ini + dur });
+  };
   const sinDespertarHoy = plan.estado === "ok" && plan.bloques[0].estado !== "hecho" && !suenoAhora;
   const alarmaPanales = a.alarmasActivas && !limitado ? alarmaPocosPanales(vivos, hoy, ahora, tz) : null;
 
@@ -300,7 +314,12 @@ export function Hoy(p: Props) {
         <Button variant="primary" icon="sunrise" block onClick={() => setHoja({ tipo: "desperto" })}>¿A qué hora despertó hoy?</Button>
       </section>
     );
-    dock = <div className="tz-dock"><QuickActions categories={["sleep", "feed", "diaper"]} labels={{ sleep: "Iniciar sueño", feed: "Toma", diaper: "Pañal" }} onSelect={rapido} /></div>;
+    dock = (
+      <div className="tz-dock">
+        <QuickActions categories={["sleep", "feed", "diaper"]} labels={{ sleep: "Iniciar sueño", feed: "Toma", diaper: "Pañal" }} onSelect={rapido} />
+        <Button variant="glass" icon="nap" block onClick={() => setHoja({ tipo: "sueno", modo: "pasado" })}>Registrar una siesta que ya pasó</Button>
+      </div>
+    );
   }
 
   return (
@@ -320,7 +339,7 @@ export function Hoy(p: Props) {
       <div className="tz-cols">
         <div className="tz-stack s16">
           {hero}
-          {!pechoAhora && !limitado ? <PlanDia plan={plan} ahora={ahora} tz={tz} nombre={bebe.nombre} /> : null}
+          {!pechoAhora && !limitado ? <PlanDia plan={plan} ahora={ahora} tz={tz} nombre={bebe.nombre} alTocar={tocarBloque} /> : null}
           {alarmaPanales ? (
             <div className="tz-alert" role="note">
               <div className="tz-stack s4"><p className="text-body-strong tz-alert-title">{alarmaPanales.titulo}</p><p className="text-body-sm">{alarmaPanales.texto}</p></div>
