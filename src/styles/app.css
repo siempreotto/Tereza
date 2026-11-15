@@ -336,3 +336,4 @@ a.tz-row, button.tz-row { cursor: pointer; width: 100%; text-align: left; backgr
 /* Franjas de sueño aprendidas (48 medias horas) */
 .tz-heat { display: grid; grid-template-columns: repeat(48, 1fr); gap: 2px; height: 28px; }
 .tz-heat i { display: block; border-radius: 3px; background: var(--cat-sleep); }
+.tz-plan-accion { min-height: 36px; padding: 0 14px; flex: none; }

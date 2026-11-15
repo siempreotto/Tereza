@@ -11,12 +11,13 @@ import { describir, ms, type Evento, type Payload } from "@/lib/core/eventos";
 import { edadMeses, esNoche } from "@/lib/core/sueno";
 import { DIA, enHora, fDuracion, fHora, inicioDia, MIN, partes } from "@/lib/core/tiempo";
 import { fVolumen, volumenAMl, volumenEnUnidad } from "@/lib/core/unidades";
+import { etiquetaCorta, horaEnDia, rangoSueno } from "@/lib/core/rango";
 import type { Ajustes } from "@/lib/datos/hoy";
 import type { Bebe } from "./Hoy";
 
 export type HojaAbierta =
   | { tipo: "agregar" }
-  | { tipo: "sueno" }
+  | { tipo: "sueno"; modo?: "ahora" | "pasado"; inicio?: number; fin?: number }
   | { tipo: "desperto" }
   | { tipo: "dormir" }
   | { tipo: "nocturno" }
@@ -50,17 +51,19 @@ type Props = {
 
 const iso = (n: number) => new Date(n).toISOString();
 
-/** Hora "HH:MM" ↔ instante dentro del día local de `base`. Si la hora queda en el futuro, se toma del día anterior. */
-function TimeInput({ id, label, value, onChange, tz, ahora }: { id: string; label: string; value: number; onChange: (n: number) => void; tz: string; ahora: number }) {
+/** Hora "HH:MM" → instante sobre el día `base` (hoy por defecto). Si queda en el futuro, es del día anterior.
+ *  El día se recalcula en cada cambio desde `base`, así un valor intermedio del selector no deja la hora en otro día. */
+function TimeInput({ id, label, value, onChange, tz, ahora, base }: { id: string; label: string; value: number; onChange: (n: number) => void; tz: string; ahora: number; base?: number }) {
   const p = partes(value, tz);
   const v = `${String(p.hora).padStart(2, "0")}:${String(p.minuto).padStart(2, "0")}`;
   return (
-    <input id={id} className="tz-input tz-num" type="time" value={v} aria-label={label} onChange={(e) => {
-      if (!e.target.value) return;
-      let n = enHora(inicioDia(value, tz), e.target.value, tz);
-      if (n > ahora + 5 * MIN) n -= DIA;
-      onChange(n);
-    }} />
+    <span className="tz-stack" style={{ gap: 2 }}>
+      <input id={id} className="tz-input tz-num" type="time" value={v} aria-label={label} aria-describedby={`${id}-dia`} onChange={(e) => {
+        if (!e.target.value) return;
+        onChange(horaEnDia(e.target.value, ahora, tz, base ?? ahora));
+      }} />
+      <span id={`${id}-dia`} className="text-body-sm tz-muted">{etiquetaCorta(value, ahora, tz)}</span>
+    </span>
   );
 }
 
@@ -74,7 +77,7 @@ export function Hojas(p: Props) {
   }, [hoja, cerrar]);
   if (!hoja) return null;
   switch (hoja.tipo) {
-    case "sueno": return <HojaSueno {...p} />;
+    case "sueno": return <HojaSueno {...p} inicial={hoja} />;
     case "desperto": return <HojaDesperto {...p} />;
     case "dormir": return <HojaDormir {...p} />;
     case "nocturno": return <HojaNocturno {...p} />;
@@ -116,35 +119,44 @@ function Chips<T extends string>({ options, value, onChange }: { options: { v: T
 const LUGARES = [{ v: "cuna", l: "Cuna" }, { v: "brazos", l: "Brazos" }, { v: "carriola", l: "Carriola" }, { v: "auto", l: "Auto" }, { v: "otro", l: "Otro" }] as const;
 const COMOS = [{ v: "solo", l: "Solo" }, { v: "arrullo", l: "Arrullo" }, { v: "pecho", l: "Pecho" }, { v: "biberon", l: "Biberón" }] as const;
 
-function HojaSueno({ cerrar, registrar, ahora, ajustes: a, eventos }: Props) {
-  const [modo, setModo] = useState<"ahora" | "pasado">("ahora");
-  const [inicio, setInicio] = useState(ahora - 90 * MIN);
-  const [fin, setFin] = useState(ahora - 10 * MIN);
+function HojaSueno({ cerrar, registrar, ahora, ajustes: a, eventos, inicial }: Props & { inicial: Extract<HojaAbierta, { tipo: "sueno" }> }) {
+  const tz = a.tz;
+  const [modo, setModo] = useState<"ahora" | "pasado">(inicial.modo ?? "ahora");
+  const [inicio, setInicio] = useState(inicial.inicio ?? ahora - 90 * MIN);
+  const [fin, setFin] = useState(inicial.fin ?? ahora - 10 * MIN);
   const [lugar, setLugar] = useState<Payload<"sueno">["lugar"]>("cuna");
   const [como, setComo] = useState<Payload<"sueno">["como_se_durmio"]>("solo");
+  const [confirmado, setConfirmado] = useState(false);
   const activo = eventos.find((e) => e.tipo === "sueno" && !e.ended_at);
-  const dur = (fin - inicio) / MIN;
+  const r = rangoSueno(inicio, fin, ahora);
+  const largo = r.minutos > (esNoche(a)(r.inicio) ? 14 * 60 : 6 * 60);
   const guardar = async () => {
-    if (modo === "ahora") await registrar({ babyId: "", tipo: "sueno", startedAt: iso(ahora), endedAt: null, payload: { lugar, como_se_durmio: como } }, `Empezó el sueño a las ${fHora(ahora, a.tz)}`);
-    else await registrar({ babyId: "", tipo: "sueno", startedAt: iso(inicio), endedAt: iso(fin < inicio ? fin + DIA : fin), payload: { lugar, como_se_durmio: como } });
+    if (modo === "ahora") await registrar({ babyId: "", tipo: "sueno", startedAt: iso(ahora), endedAt: null, payload: { lugar, como_se_durmio: como } }, `Empezó el sueño a las ${fHora(ahora, tz)}`);
+    else {
+      if (r.futuro) return;
+      if (largo && !confirmado) { setConfirmado(true); return; }
+      await registrar({ babyId: "", tipo: "sueno", startedAt: iso(r.inicio), endedAt: iso(r.fin), payload: { lugar, como_se_durmio: como } }, `Guardé: sueño de ${fHora(r.inicio, tz)} a ${fHora(r.fin, tz)} (${etiquetaCorta(r.fin, ahora, tz)}) · ${fDuracion(r.minutos)}`);
+    }
     cerrar();
   };
   return (
     <Sheet titulo="Siesta o sueño" cat="sleep" onClose={cerrar}>
       <Seg label="Tipo de registro" value={modo} onChange={setModo} options={[{ v: "ahora", l: "Empezar ahora" }, { v: "pasado", l: "Uno que ya pasó" }]} />
-      {modo === "ahora" && activo ? <div className="tz-alert info" role="note"><div className="tz-stack s4"><p className="text-body-strong tz-alert-title">Ya hay un sueño en curso</p><p className="text-body-sm">Empezó a las {fHora(ms(activo.started_at), a.tz)}. Si guardas, verás ese mismo; no se duplica.</p></div></div> : null}
+      {modo === "ahora" && activo ? <div className="tz-alert info" role="note"><div className="tz-stack s4"><p className="text-body-strong tz-alert-title">Ya hay un sueño en curso</p><p className="text-body-sm">Empezó a las {fHora(ms(activo.started_at), tz)}. Si guardas, verás ese mismo; no se duplica.</p></div></div> : null}
       {modo === "pasado" ? (
         <div className="tz-stack s8">
           <div className="tz-timefield">
-            <Field label="Se durmió" id="sl-ini"><TimeInput id="sl-ini" label="Se durmió" value={inicio} onChange={setInicio} tz={a.tz} ahora={ahora} /></Field>
-            <Field label="Despertó" id="sl-fin"><TimeInput id="sl-fin" label="Despertó" value={fin} onChange={setFin} tz={a.tz} ahora={ahora} /></Field>
+            <Field label="Se durmió" id="sl-ini"><TimeInput id="sl-ini" label="Se durmió" value={r.inicio} onChange={(v) => { setInicio(v); setConfirmado(false); }} tz={tz} ahora={ahora} /></Field>
+            <Field label="Despertó" id="sl-fin"><TimeInput id="sl-fin" label="Despertó" value={r.fin} onChange={(v) => { setFin(v); setConfirmado(false); }} tz={tz} ahora={ahora} /></Field>
           </div>
-          <p className="tz-help tz-num">{dur > 0 ? `Duración ${fDuracion(dur)}` : `Termina al día siguiente · ${fDuracion(dur + 1440)}`}</p>
+          <p className="tz-help tz-num" aria-live="polite">De {fHora(r.inicio, tz)} ({etiquetaCorta(r.inicio, ahora, tz)}) a {fHora(r.fin, tz)} ({etiquetaCorta(r.fin, ahora, tz)}) · {fDuracion(r.minutos)}</p>
+          {r.futuro ? <p className="text-body-sm c-warning" role="alert">La hora en que despertó no puede estar en el futuro.</p> : null}
+          {largo && !r.futuro ? <p className="text-body-sm c-warning" role="alert">¿Seguro? Son {fDuracion(r.minutos)}. Revisa las horas{confirmado ? "; si están bien, vuelve a tocar Guardar" : ""}.</p> : null}
         </div>
       ) : null}
       <Field label="Dónde durmió"><Chips options={[...LUGARES]} value={lugar} onChange={(v) => setLugar(v ?? "cuna")} /></Field>
       <Field label="Cómo se durmió"><Chips options={[...COMOS]} value={como} onChange={(v) => setComo(v ?? "solo")} /></Field>
-      <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar}>{modo === "ahora" ? "Iniciar sueño" : "Guardar sueño"}</Button></div>
+      <div className="tz-sheet-actions"><Button variant="primary" size="lg" block onClick={guardar} disabled={modo === "pasado" && r.futuro}>{modo === "ahora" ? "Iniciar sueño" : largo && confirmado ? "Sí, guardar" : "Guardar sueño"}</Button></div>
     </Sheet>
   );
 }
@@ -467,7 +479,9 @@ function HojaDetalle({ cerrar, evento: e0, ahora, ajustes: a, eliminar, alCorreg
   const quien = nombres[e0.logged_by ?? ""] ?? "Alguien";
   const guardar = async () => {
     setOcupado(true);
-    const r = await corregirEvento({ eventId: e0.id, expectedVersion: e0.version, startedAt: iso(inicio), endedAt: fin ? iso(fin) : e0.ended_at === null ? null : undefined, payload, notas: notas || null });
+    const rr = fin ? rangoSueno(inicio, fin, ahora) : null;
+    if (rr?.futuro) { avisar("La hora de fin no puede estar en el futuro."); return; }
+    const r = await corregirEvento({ eventId: e0.id, expectedVersion: e0.version, startedAt: iso(rr ? rr.inicio : inicio), endedAt: rr ? iso(rr.fin) : e0.ended_at === null ? null : undefined, payload, notas: notas || null });
     setOcupado(false);
     if (!r.ok) {
       if ("conflicto" in r) return setConflicto(r.conflicto);
@@ -504,9 +518,9 @@ function HojaDetalle({ cerrar, evento: e0, ahora, ajustes: a, eliminar, alCorreg
   return (
     <Sheet titulo={d.titulo} cat={cat} onClose={cerrar}>
       <div className={e0.tipo === "sueno" || e0.tipo === "toma_pecho" ? "tz-timefield" : ""}>
-        <Field label={e0.tipo === "sueno" ? "Se durmió" : "Hora"} id="ev-ini"><TimeInput id="ev-ini" label="Inicio" value={inicio} onChange={setInicio} tz={a.tz} ahora={ahora} /></Field>
+        <Field label={e0.tipo === "sueno" ? "Se durmió" : "Hora"} id="ev-ini"><TimeInput id="ev-ini" label="Inicio" value={inicio} onChange={setInicio} tz={a.tz} ahora={ahora} base={ms(e0.started_at)} /></Field>
         {e0.tipo === "sueno" || e0.tipo === "toma_pecho" ? (
-          <Field label={e0.tipo === "sueno" ? "Despertó" : "Terminó"} id="ev-fin">{fin ? <TimeInput id="ev-fin" label="Fin" value={fin} onChange={(v) => setFin(v < inicio ? v + DIA : v)} tz={a.tz} ahora={ahora} /> : <span className="tz-input sunken">En curso</span>}</Field>
+          <Field label={e0.tipo === "sueno" ? "Despertó" : "Terminó"} id="ev-fin">{fin ? <TimeInput id="ev-fin" label="Fin" value={fin} onChange={setFin} tz={a.tz} ahora={ahora} base={e0.ended_at ? ms(e0.ended_at) : inicio} /> : <span className="tz-input sunken">En curso</span>}</Field>
         ) : null}
       </div>
       {e0.tipo === "sueno" ? (

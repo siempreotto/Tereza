@@ -21,6 +21,8 @@ export type Bloque = {
   fin?: number;
   duracionMin?: number;
   fuente: Fuente;
+  /** Evento registrado detrás del bloque (para abrir su detalle). */
+  eventoId?: string;
   /** Por qué esta hora, en una frase. */
   porQue: string;
 };
@@ -71,7 +73,7 @@ export function medianaPonderada(xs: { v: number; peso: number }[]): number | nu
   return s[s.length - 1].v;
 }
 
-type DiaSueno = { D: number; despertar: number | null; dormir: number | null; siestas: Evento[]; noche: Evento[] };
+type DiaSueno = { D: number; despertar: number | null; despertarId: string | null; dormir: number | null; siestas: Evento[]; noche: Evento[] };
 
 /** Desarma un día local en despertar de la mañana, siestas y hora de dormir. */
 function desarmarDia(suenos: Evento[], D: number, ahora: number, h: Hogar): DiaSueno {
@@ -82,7 +84,7 @@ function desarmarDia(suenos: Evento[], D: number, ahora: number, h: Hogar): DiaS
   const desp = nocturnos.filter((e) => e.ended_at && ms(e.ended_at) >= D && ms(e.ended_at) < D + 12 * HORA).sort((a, b) => ms(b.ended_at!) - ms(a.ended_at!))[0];
   const siestas = suenos.filter((e) => { const i = ms(e.started_at); return i >= D && i < D2 && !noche(i) && (e.ended_at ? ms(e.ended_at) : ahora) - i >= 10 * MIN; });
   const dormir = nocturnos.find((e) => { const i = ms(e.started_at); return i >= D + 15 * HORA && i < D2 + 3 * HORA; });
-  return { D, despertar: desp ? ms(desp.ended_at!) : null, dormir: dormir ? ms(dormir.started_at) : null, siestas, noche: nocturnos };
+  return { D, despertar: desp ? ms(desp.ended_at!) : null, despertarId: desp?.id ?? null, dormir: dormir ? ms(dormir.started_at) : null, siestas, noche: nocturnos };
 }
 
 /** Patrones de los últimos 14 días con registros (sin contar hoy). */
@@ -169,7 +171,7 @@ export function planDelDia(evs: Evento[], bebe: { fechaNacimiento: string; seman
   let cursor: number;
   if (hoy.despertar != null) {
     cursor = hoy.despertar;
-    bloques.push({ tipo: "despertar", estado: "hecho", desde: cursor, hasta: cursor, hora: cursor, fuente: "registro", porQue: "Hora registrada." });
+    bloques.push({ tipo: "despertar", estado: "hecho", desde: cursor, hasta: cursor, hora: cursor, fuente: "registro", eventoId: hoy.despertarId ?? undefined, porQue: "Hora registrada." });
   } else {
     let t: number, fuente: Fuente, porQue: string;
     if (fijo) { t = enHora(D, fijo.despertar, tz); fuente = "horario"; porQue = "Tu horario fijo."; }
@@ -196,12 +198,12 @@ export function planDelDia(evs: Evento[], bebe: { fechaNacimiento: string; seman
       const ini = ms(e.started_at);
       if (e.ended_at) {
         const fin = ms(e.ended_at);
-        bloques.push({ tipo: "siesta", n: nn, estado: "hecho", desde: ini, hasta: fin, hora: ini, fin, duracionMin: Math.round((fin - ini) / MIN), fuente: "registro", porQue: "Registrada." });
+        bloques.push({ tipo: "siesta", n: nn, estado: "hecho", desde: ini, hasta: fin, hora: ini, fin, duracionMin: Math.round((fin - ini) / MIN), fuente: "registro", eventoId: e.id, porQue: "Registrada." });
         cursor = fin;
       } else {
         const dur = duracionEstimada(i);
         const fin = Math.max(ahora, ini + dur * MIN);
-        bloques.push({ tipo: "siesta", n: nn, estado: "en_curso", desde: ini, hasta: fin, hora: ini, fin, duracionMin: dur, fuente: "registro", porQue: `En curso; suele durar unos ${fDuracion(dur)}.` });
+        bloques.push({ tipo: "siesta", n: nn, estado: "en_curso", desde: ini, hasta: fin, hora: ini, fin, duracionMin: dur, fuente: "registro", eventoId: e.id, porQue: `En curso; suele durar unos ${fDuracion(dur)}.` });
         cursor = fin;
       }
       continue;
@@ -238,7 +240,7 @@ export function planDelDia(evs: Evento[], bebe: { fechaNacimiento: string; seman
   // 3. Dormir
   if (dormirReal) {
     const ini = ms(dormirReal.started_at);
-    bloques.push({ tipo: "dormir", estado: dormirReal.ended_at ? "hecho" : "en_curso", desde: ini, hasta: ini, hora: ini, fuente: "registro", porQue: "Hora registrada." });
+    bloques.push({ tipo: "dormir", estado: dormirReal.ended_at ? "hecho" : "en_curso", desde: ini, hasta: ini, hora: ini, fuente: "registro", eventoId: dormirReal.id, porQue: "Hora registrada." });
   } else {
     const vFinal = ref.ventanas[ref.ventanas.length - 1];
     let centro: number, fuente: Fuente, porQue: string;

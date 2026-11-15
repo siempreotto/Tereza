@@ -92,10 +92,13 @@ test("biberón en onzas y aparece en la lista de hoy", async ({ page }) => {
 });
 
 test("modo noche manual", async ({ page }) => {
+  // El tema se aplica al hidratar (de noche, el modo automático ya lo activa): se lee el estado desde el botón.
   const boton = page.getByRole("button", { name: /Cambiar a modo (noche|día)/ });
-  const antes = await page.locator("html").getAttribute("data-theme");
+  await page.waitForLoadState("networkidle");
+  const eraNoche = /día/.test((await boton.getAttribute("aria-label")) ?? "");
   await boton.click();
-  await expect(page.locator("html")).not.toHaveAttribute("data-theme", antes ?? "light");
+  if (eraNoche) await expect(page.locator(".tz-screen").first()).not.toHaveAttribute("data-theme", "noche");
+  else await expect(page.locator(".tz-screen").first()).toHaveAttribute("data-theme", "noche");
 });
 
 test("Diario, patrones, resumen y salud cargan con datos", async ({ page }) => {
@@ -129,4 +132,28 @@ test("sin red: el pañal queda «por enviar» y se envía al volver la conexión
     await fila.click();
     await page.getByRole("button", { name: /Eliminar/ }).first().click();
   }
+});
+
+test("siesta que ya pasó: se guarda hoy con sus horas y el plan la cuenta", async ({ page }) => {
+  if (await page.getByRole("button", { name: "Despertó", exact: true }).isVisible()) {
+    await despertar(page);
+    await expect(page.getByRole("status")).toContainText(/Despertó a las/);
+  }
+  const hhmm = (minAntes: number) => new Intl.DateTimeFormat("en-GB", { timeZone: "America/Guatemala", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(Date.now() - minAntes * 60_000));
+  // Desde un bloque del plan se abre la hoja ya en «Uno que ya pasó».
+  const ya = page.getByRole("button", { name: /^Registrar Siesta/ }).first();
+  if (await ya.isVisible()) {
+    await ya.click();
+    await expect(page.getByRole("dialog").getByRole("button", { name: "Uno que ya pasó" })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("dialog").getByRole("button", { name: "Cerrar" }).click();
+  }
+  await page.getByRole("button", { name: "Registrar una siesta que ya pasó" }).click();
+  const hoja = page.getByRole("dialog");
+  await hoja.getByLabel("Se durmió").fill(hhmm(110));
+  await hoja.getByLabel("Despertó").fill(hhmm(60));
+  await expect(hoja.getByText(/· 50 min/)).toBeVisible();
+  await hoja.getByRole("button", { name: "Guardar sueño" }).click();
+  await expect(page.getByRole("status")).toContainText(/Guardé: sueño de .* 50 min/);
+  await page.reload();
+  await expect(page.getByRole("list", { name: "Bloques del día" })).toContainText("50 min");
 });

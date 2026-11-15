@@ -116,7 +116,7 @@ describe.skipIf(!hay)("servidor MCP", () => {
 
   it("plan del día y despertar con ánimo", async () => {
     // Si había un sueño en curso de otra corrida, lo cierra registrando el despertar.
-    const d = await llamar(A, "registrar_despertar", { hora: "hace 5 minutos", se_durmio: "ayer a las 7 de la noche", animo: "bien", como_termino: "natural" });
+    const d = await llamar(A, "registrar_despertar", { hora: "hace 5 minutos", se_durmio: "hace 3 horas", animo: "bien", como_termino: "natural" });
     expect(d.error, d.texto).toBe(false);
     const ev = d.datos.evento as { event_id: string; payload: { animo_despertar?: string } };
     expect(ev.payload.animo_despertar).toBe("bien");
